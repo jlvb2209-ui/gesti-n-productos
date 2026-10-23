@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Productos - Gracia Accesorios</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        :root {
+            --bg-header: #000000;
+            --bg-page: #0a0a0a;
+            --card-bg: #141414;
+            --gold: #d4af37;
+            --text-dark: #ffffff;
+            --text-muted: #a3a3a3;
+            --border-color: #262626;
+            --input-bg: #171717;
+        }
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+        }
+        .topbar {
+            background-color: var(--bg-header);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+        .avatar-circle {
+            background: rgba(212, 175, 55, 0.2);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 800;
+        }
+        .btn-header {
+            background: transparent;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-header:hover {
+            background: var(--gold);
+            color: #000;
+        }
+        .banner-header {
+            background-color: var(--bg-header);
+            color: #ffffff;
+            padding: 40px 24px 80px 24px;
+        }
+        .card-panel {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 32px;
+            margin-top: -50px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+        .card-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+        .card-title h2 {
+            margin: 4px 0;
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .card-title p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1.5fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .field-group label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--gold);
+        }
+        .input-control {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 0.9rem;
+            color: #ffffff;
+            outline: none;
+            font-family: inherit;
+        }
+        .input-control:focus {
+            border-color: var(--gold);
+        }
+        /* Botón pequeño para abrir el administrador de categorías */
+        .btn-adm-toggle {
+            background: #262626;
+            border: 1px solid var(--border-color);
+            color: var(--gold);
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-adm-toggle:hover {
+            background: #333;
+        }
+        /* Panel desplegable de categorías */
+        .category-admin-box {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .category-add-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .btn-add-cat {
+            background: var(--gold);
+            color: #000;
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-add-cat:hover {
+            background: #f3e5ab;
+        }
+        .category-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .category-row-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 6px;
+        }
+        .category-row-item span {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #ffffff;
+        }
+        .btn-del-cat-row {
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        .file-drop-area {
+            border: 1px dashed var(--border-color);
+            background: var(--input-bg);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .btn-file {
+            background: #262626;
+            border: 1px solid #333;
+            color: var(--gold);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .file-name {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .btn-submit {
+            background: var(--gold);
+            color: #000000;
+            border: none;
+            border-radius: 10px;
+            padding: 16px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-submit:hover {
+            background: #f3e5ab;
+        }
+        .product-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .product-item img {
+            width: 100%;
+            height: 140px;
+            object-fit: contain;
+            border-radius: 6px;
+            background: #111;
+        }
+        .btn-delete {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-top: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand-logo">
+            <div class="avatar-circle">GA</div>
+            <span>GRACIA ACCESORIOS</span>
+        </div>
+        
+    </div>
+    
+    <div class="banner-header">
+        <div class="w">
+            <span style="background: rgba(212,175,55,0.15); color:#d4af37; font-size:0.72rem; font-weight:800; padding:4px 12px; border-radius:20px; text-transform:uppercase;">Inventario y Tienda</span>
+            <h1>Gestión de Productos</h1>
+            
+        </div>
+    </div>
+
+    <div class="w">
+        <div class="card-panel">
+            <div class="card-header-flex">
+                <div class="card-title">
+                    <span style="color:#d4af37; font-size:0.72rem; font-weight:800; text-transform:uppercase;">Nuevo Producto</span>
+                    <h2>Publicar artículo</h2>
+                    <p>Ingresa los detalles, selecciona categoría y sube la foto a Google Drive.</p>
+                </div>
+            </div>
+
+            <form id="formPublicarJoya">
+                <div class="form-grid">
+                    <div class="field-group">
+                        <label for="j_nombre">Nombre del producto *</label>
+                        <input type="text" id="j_nombre" class="input-control" placeholder="Ej: Anillo Solitario Oro 18K" required>
+                    </div>
+                    <div class="field-group">
+                        <label for="j_precio">Precio (₡) *</label>
+                        <input type="number" id="j_precio" class="input-control" placeholder="8500" required>
+                    </div>
+                    <div class="field-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                            <label for="j_categoria" style="margin:0;">Categoría *</label>
+                            <button type="button" id="btnToggleAdmCat" class="btn-adm-toggle">⚙ Adm. categorías</button>
+                        </div>
+                        <select id="j_categoria" class="input-control" required>
+                            <option value="">Selecciona una categoría...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Panel oculto/desplegable para administrar categorías -->
+                <div id="boxAdmCategorias" class="category-admin-box" style="display: none;">
+                    <h3 style="margin: 0 0 4px 0; font-size: 0.95rem; color: var(--gold);">Administrar Categorías Principales</h3>
+                    <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: var(--text-muted);">Añade una categoría nueva o elimina las existentes.</p>
+                    <div class="category-add-row">
+                        <input type="text" id="nuevaCategoriaInput" class="input-control" placeholder="Nombre de la nueva categoría..." style="flex: 1;">
+                        <button type="button" id="btnAnadirCategoria" class="btn-add-cat">Añadir</button>
+                    </div>
+                    <div class="category-list-container" id="listaAdminCategorias"></div>
+                </div>
+
+                <div class="field-group" style="margin-bottom: 6px;">
+                    <label>Fotografía del Producto (Google Drive) *</label> 
+                </div>
+                <div class="file-drop-area">
+                    <button type="button" class="btn-file" id="btnSeleccionarFoto">Examinar...</button>
+                    <input type="file" id="j_foto" accept="image/*" style="display:none;">
+                    <span class="file-name" id="textoNombreArchivo">No se ha seleccionado ningún archivo.</span>
+                </div>
+
+                <div class="field-group" style="margin-bottom: 20px;">
+                    <label for="j_descripcion">Descripción del producto *</label>
+                    <textarea id="j_descripcion" class="input-control" rows="3" placeholder="Detalles, material, quilates..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn-submit" id="btnGuardar">
+                    Subir foto a Google Drive y Publicar
+                </button>
+                <p id="mensajeEstado" style="text-align:center; font-size:0.9rem; margin-top:10px; font-weight:600;"></p>
+            </form>
+        </div>
+
+        <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 12px; color:#d4af37;">Productos Publicados</h2>
+        <div class="product-grid" id="listaInventarioAdmin" style="padding-bottom: 40px;">
+            <!-- Se cargan automáticamente de Firebase -->
+        </div>
+    </div>
+
+    <script type="module" src="script-admin.js"></script>
+</body>
+</html>
