@@ -354,7 +354,7 @@
                 <div class="card-title">
                     <span id="kickerForm" style="color:#d4af37; font-size:0.72rem; font-weight:800; text-transform:uppercase;">Nuevo Producto</span>
                     <h2 id="tituloForm">Publicar artículo</h2>
-                    <p id="subtituloForm">Ingresa los detalles, selecciona categoría y sube una foto o carpeta de imágenes a Google Drive.</p>
+                    <p id="subtituloForm">Ingresa los detalles, selecciona categoría y sube fotos individuales o una carpeta completa.</p>
                 </div>
             </div>
             
@@ -391,15 +391,15 @@
                 </div>
 
                 <div class="field-group" style="margin-bottom: 6px;">
-                    <label>Fotografía(s) del Producto (Selecciona foto individual o carpeta)</label> 
+                    <label>Fotografía(s) del Producto</label> 
                 </div>
 
-                <!-- DOS BOTONES INDEPENDIENTES: UNO PARA FOTOS Y OTRO PARA CARPETAS -->
+                <!-- DOS BOTONES INDEPENDIENTES Y CORREGIDOS -->
                 <div class="file-drop-area">
                     <button type="button" class="btn-file" id="btnSeleccionarFoto">📷 Seleccionar Foto(s)...</button>
                     <button type="button" class="btn-file" id="btnSeleccionarCarpeta">📁 Seleccionar Carpeta...</button>
                     
-                    <!-- Inputs ocultos independientes -->
+                    <!-- Inputs ocultos separados -->
                     <input type="file" id="j_foto" accept="image/*" multiple style="display:none;">
                     <input type="file" id="j_carpeta" accept="image/*" multiple webkitdirectory style="display:none;">
                     
