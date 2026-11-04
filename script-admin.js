@@ -48,6 +48,7 @@ const subtituloForm = document.getElementById("subtituloForm");
 let editandoId = null;
 let productosCache = {};
 let imagenExistenteUrl = "";
+let categoriasColapsadas = {}; // Estado para saber qué categorías están ocultas o desplegadas
 
 btnFile.addEventListener("click", () => fileInput.click());
 
@@ -137,7 +138,7 @@ listaAdminCats.addEventListener("click", async (e) => {
     }
 });
 
-// --- PREPARAR EDICIÓN (SOLO UN PRODUCTO INDIVIDUAL) ---
+// --- PREPARAR EDICIÓN ---
 window.prepararEdicion = (id) => {
     const prod = productosCache[id];
     if (!prod) return;
@@ -188,7 +189,7 @@ function resetearFormulario() {
     mensajeEstado.textContent = "";
 }
 
-// --- PUBLICAR CADA IMAGEN COMO UN PRODUCTO INDIVIDUAL O EDITAR ---
+// --- PUBLICAR O EDITAR PRODUCTO ---
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const archivos = Array.from(fileInput.files).filter(f => f.type.startsWith("image/"));
@@ -208,7 +209,6 @@ form.addEventListener("submit", async (e) => {
         const descripcion = document.getElementById("j_descripcion").value.trim();
 
         if (editandoId) {
-            // MODO EDICIÓN: Se actualiza únicamente el producto seleccionado
             let urlFinal = imagenExistenteUrl;
 
             if (archivos.length > 0) {
@@ -249,7 +249,6 @@ form.addEventListener("submit", async (e) => {
             mensajeEstado.style.color = "#16a34a";
             mensajeEstado.textContent = "¡Producto actualizado con éxito!";
         } else {
-            // MODO CREACIÓN MÚLTIPLE: Se crea UN PRODUCTO INDIVIDUAL por cada imagen seleccionada
             let creados = 0;
 
             for (let i = 0; i < archivos.length; i++) {
@@ -277,14 +276,13 @@ form.addEventListener("submit", async (e) => {
                     continue;
                 }
 
-                // Guardar como producto independiente
                 await addDoc(collection(db, "jewelry"), {
                     nombre: archivos.length > 1 ? `${nombreBase} (${i + 1})` : nombreBase,
                     precio: precio,
                     categoria: categoria,
                     descripcion: descripcion,
                     imagenUrl: dataDrive.url,
-                    creado: Date.now() + i // Offset de tiempo para mantener el orden
+                    creado: Date.now() + i
                 });
 
                 creados++;
@@ -305,39 +303,89 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
-// --- LISTAR Y GESTIONAR INVENTARIO (CADAPRODUCTO SE MUESTRA EN SU PROPIO CUADRITO) ---
+// --- FUNCIÓN GLOBAL PARA COLAPSAR / EXPANDIR CATEGORÍAS ---
+window.toggleCategoriaColapsar = (catNombre) => {
+    categoriasColapsadas[catNombre] = !categoriasColapsadas[catNombre];
+    renderizarInventarioAgrupado();
+};
+
+let listaProductosSnapshot = [];
+
+// --- LISTAR Y GESTIONAR INVENTARIO AGRUPADO POR CATEGORÍA CON FLECHAS ---
 const q = query(collection(db, "jewelry"), orderBy("creado", "desc"));
 onSnapshot(q, (snapshot) => {
-    listaInventario.innerHTML = "";
+    listaProductosSnapshot = [];
     productosCache = {};
-
-    if (snapshot.empty) {
-        listaInventario.innerHTML = "<p style='color:#a3a3a3; grid-column: 1 / -1;'>No hay productos registrados aún.</p>";
-        return;
-    }
 
     snapshot.forEach((documento) => {
         const item = documento.data();
         const id = documento.id;
         productosCache[id] = { id, ...item };
+        listaProductosSnapshot.push({ id, ...item });
+    });
 
-        const card = document.createElement("div");
-        card.className = "product-item";
-        card.innerHTML = `
-            <div>
-                <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
-                <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
-                <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
-                <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
+    renderizarInventarioAgrupado();
+});
+
+function renderizarInventarioAgrupado() {
+    listaInventario.innerHTML = "";
+
+    if (listaProductosSnapshot.length === 0) {
+        listaInventario.innerHTML = "<p style='color:#a3a3a3; grid-column: 1 / -1;'>No hay productos registrados aún.</p>";
+        return;
+    }
+
+    // Agrupar productos por categoría
+    let porCategoria = {};
+    listaProductosSnapshot.forEach(item => {
+        const cat = item.categoria ? item.categoria.toUpperCase() : "SIN CATEGORÍA";
+        if (!porCategoria[cat]) porCategoria[cat] = [];
+        porCategoria[cat].push(item);
+    });
+
+    // Renderizar secciones por cada categoría
+    for (const [cat, productos] of Object.entries(porCategoria)) {
+        const estaColapsada = !!categoriasColapsadas[cat];
+        const flecha = estaColapsada ? "▶" : "▼";
+        const estiloDisplay = estaColapsada ? "display: none;" : "display: grid;";
+
+        const seccionCat = document.createElement("div");
+        seccionCat.style.cssText = "grid-column: 1 / -1; background: #141414; border: 1px solid #262626; border-radius: 12px; padding: 16px; margin-bottom: 16px;";
+        
+        seccionCat.innerHTML = `
+            <div onclick="toggleCategoriaColapsar('${cat}')" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #d4af37; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 0.9rem;">${flecha}</span> 
+                    📁 ${cat} (${productos.length} productos)
+                </h3>
             </div>
-            <div class="product-actions">
-                <button class="btn-edit" onclick="prepararEdicion('${id}')" type="button">✏️ Editar</button>
-                <button class="btn-delete" data-id="${id}" type="button">🗑 Eliminar</button>
+            <div id="grid-cat-${cat}" style="${estiloDisplay} grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 14px;">
             </div>
         `;
-        listaInventario.appendChild(card);
-    });
-});
+
+        const gridProductos = seccionCat.querySelector(`#grid-cat-${cat}`);
+
+        productos.forEach(item => {
+            const card = document.createElement("div");
+            card.className = "product-item";
+            card.innerHTML = `
+                <div>
+                    <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
+                    <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
+                    <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
+                    <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
+                </div>
+                <div class="product-actions">
+                    <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
+                    <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
+                </div>
+            `;
+            gridProductos.appendChild(card);
+        });
+
+        listaInventario.appendChild(seccionCat);
+    }
+}
 
 listaInventario.addEventListener("click", async (e) => {
     if (e.target.classList.contains("btn-delete")) {
