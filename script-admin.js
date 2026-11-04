@@ -48,7 +48,7 @@ const subtituloForm = document.getElementById("subtituloForm");
 let editandoId = null;
 let productosCache = {};
 let imagenExistenteUrl = "";
-let categoriasColapsadas = {}; // Estado para saber qué categorías están ocultas o desplegadas
+let categoriasColapsadas = {};
 
 btnFile.addEventListener("click", () => fileInput.click());
 
@@ -195,7 +195,7 @@ form.addEventListener("submit", async (e) => {
     const archivos = Array.from(fileInput.files).filter(f => f.type.startsWith("image/"));
 
     if (!editandoId && archivos.length === 0) {
-        alert("Por favor selecciona al menos una imagen o carpeta.");
+        alert("Por favor selecciona al menos una imagen, foto individual o carpeta.");
         return;
     }
 
@@ -335,7 +335,6 @@ function renderizarInventarioAgrupado() {
         return;
     }
 
-    // Agrupar productos por categoría
     let porCategoria = {};
     listaProductosSnapshot.forEach(item => {
         const cat = item.categoria ? item.categoria.toUpperCase() : "SIN CATEGORÍA";
@@ -343,7 +342,6 @@ function renderizarInventarioAgrupado() {
         porCategoria[cat].push(item);
     });
 
-    // Renderizar secciones por cada categoría
     for (const [cat, productos] of Object.entries(porCategoria)) {
         const estaColapsada = !!categoriasColapsadas[cat];
         const flecha = estaColapsada ? "▶" : "▼";
