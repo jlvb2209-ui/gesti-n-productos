@@ -27,7 +27,9 @@ const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 
 const form = document.getElementById("formPublicarJoya");
 const fileInput = document.getElementById("j_foto");
+const folderInput = document.getElementById("j_carpeta");
 const btnFile = document.getElementById("btnSeleccionarFoto");
+const btnFolder = document.getElementById("btnSeleccionarCarpeta");
 const txtFileName = document.getElementById("textoNombreArchivo");
 const previewGallery = document.getElementById("previewGallery");
 const btnSubmit = document.getElementById("btnGuardar");
@@ -51,11 +53,20 @@ let imagenExistenteUrl = "";
 let categoriasColapsadas = {};
 let archivosParaSubir = [];
 
-btnFile.addEventListener("click", () => fileInput.click());
+// Vincular correctamente los botones a sus respectivos inputs ocultos
+btnFile.addEventListener("click", () => {
+    folderInput.value = "";
+    fileInput.click();
+});
 
-fileInput.addEventListener("change", () => {
+btnFolder.addEventListener("click", () => {
+    fileInput.value = "";
+    folderInput.click(); // ¡Aquí estaba el error anterior que ya quedó corregido!
+});
+
+function procesarArchivos(input) {
     previewGallery.innerHTML = "";
-    archivosParaSubir = Array.from(fileInput.files).filter(f => f.type.startsWith("image/"));
+    archivosParaSubir = Array.from(input.files).filter(f => f.type.startsWith("image/"));
     
     if (archivosParaSubir.length > 0) {
         txtFileName.textContent = `${archivosParaSubir.length} imagen(es) seleccionada(s)`;
@@ -73,7 +84,10 @@ fileInput.addEventListener("change", () => {
     } else {
         txtFileName.textContent = "No se ha seleccionado ningún archivo.";
     }
-});
+}
+
+fileInput.addEventListener("change", () => procesarArchivos(fileInput));
+folderInput.addEventListener("change", () => procesarArchivos(folderInput));
 
 btnToggleAdmCat.addEventListener("click", () => {
     boxAdmCategorias.style.display = boxAdmCategorias.style.display === "none" || boxAdmCategorias.style.display === "" ? "block" : "none";
@@ -182,6 +196,7 @@ function resetearFormulario() {
     archivosParaSubir = [];
     form.reset();
     fileInput.value = "";
+    folderInput.value = "";
     previewGallery.innerHTML = "";
     txtFileName.textContent = "No se ha seleccionado ningún archivo.";
     kickerForm.textContent = "Nuevo Producto";
@@ -278,7 +293,6 @@ form.addEventListener("submit", async (e) => {
                     continue;
                 }
 
-                // AQUÍ SE QUITÓ EL NÚMERO AUTOMÁTICO: Ahora guarda exactamente el nombre ingresado
                 await addDoc(collection(db, "jewelry"), {
                     nombre: nombreBase,
                     precio: precio,
