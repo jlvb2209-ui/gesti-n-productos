@@ -53,39 +53,36 @@ let imagenExistenteUrl = "";
 let categoriasColapsadas = {};
 let archivosParaSubir = [];
 
-// Al hacer clic en fotos, limpiamos el input de carpeta y reseteamos la selección anterior
+// Activadores de botones limpios
 btnFile.addEventListener("click", () => {
     folderInput.value = "";
     fileInput.value = "";
-    archivosParaSubir = [];
-    previewGallery.innerHTML = "";
     fileInput.click();
 });
 
-// Al hacer clic en carpeta, limpiamos el input de fotos y reseteamos la selección anterior
 btnFolder.addEventListener("click", () => {
     fileInput.value = "";
     folderInput.value = "";
-    archivosParaSubir = [];
-    previewGallery.innerHTML = "";
     folderInput.click();
 });
 
-function procesarArchivos(input) {
-    const nuevos = Array.from(input.files).filter(f => f.type.startsWith("image/"));
-    // Reemplaza por completo con los nuevos archivos de esta selección
-    archivosParaSubir = nuevos;
+// Procesamiento seguro de archivos seleccionados
+function procesarArchivos(e) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    archivosParaSubir = Array.from(files).filter(f => f.type.startsWith("image/"));
     actualizarVistaPrevia();
 }
 
-fileInput.addEventListener("change", () => procesarArchivos(fileInput));
-folderInput.addEventListener("change", () => procesarArchivos(folderInput));
+fileInput.addEventListener("change", procesarArchivos);
+folderInput.addEventListener("change", procesarArchivos);
 
 function actualizarVistaPrevia() {
     previewGallery.innerHTML = "";
     
     if (archivosParaSubir.length > 0) {
-        txtFileName.textContent = `${archivosParaSubir.length} imagen(es) seleccionada(s)`;
+        txtFileName.textContent = `${archivosParaSubir.length} imagen(es) lista(s) para publicar`;
         
         archivosParaSubir.forEach((file, index) => {
             const reader = new FileReader();
@@ -107,6 +104,7 @@ function actualizarVistaPrevia() {
     }
 }
 
+// Eliminar foto individual de la previsualización
 previewGallery.addEventListener("click", (e) => {
     if (e.target.classList.contains("btn-remove-thumb")) {
         const index = Number(e.target.dataset.index);
@@ -119,7 +117,7 @@ btnToggleAdmCat.addEventListener("click", () => {
     boxAdmCategorias.style.display = boxAdmCategorias.style.display === "none" || boxAdmCategorias.style.display === "" ? "block" : "none";
 });
 
-// --- GESTIÓN DE CATEGORÍAS EN TIEMPO REAL ---
+// --- GESTIÓN DE CATEGORÍAS ---
 onSnapshot(collection(db, "categories"), (snapshot) => {
     selectCategoria.innerHTML = '<option value="">Selecciona una categoría...</option>';
     listaAdminCats.innerHTML = "";
@@ -197,14 +195,11 @@ window.prepararEdicion = (id) => {
     if (imagenExistenteUrl) {
         const container = document.createElement("div");
         container.className = "preview-container";
-        container.innerHTML = `
-            <img src="${imagenExistenteUrl}" class="preview-thumb">
-        `;
+        container.innerHTML = `<img src="${imagenExistenteUrl}" class="preview-thumb">`;
         previewGallery.appendChild(container);
     }
 
     txtFileName.textContent = "Modificando producto individual existente.";
-
     kickerForm.textContent = "MODIFICAR PRODUCTO";
     tituloForm.textContent = "Editar artículo";
     subtituloForm.textContent = `Actualizando los detalles del producto ID: ${id}`;
@@ -240,7 +235,7 @@ form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     if (!editandoId && archivosParaSubir.length === 0) {
-        alert("Por favor selecciona al menos una foto o carpeta.");
+        alert("Por favor selecciona al menos una foto o una carpeta antes de publicar.");
         return;
     }
 
@@ -276,7 +271,7 @@ form.addEventListener("submit", async (e) => {
                 
                 const dataDrive = await res.json();
                 if (dataDrive.status !== "success") {
-                    throw new Error(dataDrive.message || "Error al subir la imagen.");
+                    throw new Error(dataDrive.message || "Error al subir la imagen a Drive.");
                 }
                 urlFinal = dataDrive.url;
             }
@@ -298,7 +293,7 @@ form.addEventListener("submit", async (e) => {
 
             for (let i = 0; i < archivosParaSubir.length; i++) {
                 const file = archivosParaSubir[i];
-                mensajeEstado.textContent = `Procesando imagen ${i + 1} de ${archivosParaSubir.length}...`;
+                mensajeEstado.textContent = `Subiendo imagen ${i + 1} de ${archivosParaSubir.length} a Google Drive...`;
 
                 const base64 = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -348,7 +343,7 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
-// --- FUNCIÓN GLOBAL PARA COLAPSAR / EXPANDIR CATEGORÍAS ---
+// --- LISTAR Y GESTIONAR INVENTARIO AGRUPADO ---
 window.toggleCategoriaColapsar = (catNombre) => {
     categoriasColapsadas[catNombre] = !categoriasColapsadas[catNombre];
     renderizarInventarioAgrupado();
@@ -356,7 +351,6 @@ window.toggleCategoriaColapsar = (catNombre) => {
 
 let listaProductosSnapshot = [];
 
-// --- LISTAR Y GESTIONAR INVENTARIO AGRUPADO POR CATEGORÍA CON FLECHAS ---
 const q = query(collection(db, "jewelry"), orderBy("creado", "desc"));
 onSnapshot(q, (snapshot) => {
     listaProductosSnapshot = [];
