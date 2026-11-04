@@ -232,12 +232,39 @@
             flex-wrap: wrap;
             margin-bottom: 20px;
         }
+        /* Estilos para miniatura y botón de eliminar individual (✕) */
+        .preview-container {
+            position: relative;
+            display: inline-block;
+        }
         .preview-thumb {
             width: 80px;
             height: 80px;
             object-fit: cover;
             border-radius: 6px;
             border: 1px solid var(--gold);
+            display: block;
+        }
+        .btn-remove-thumb {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #dc2626;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .btn-remove-thumb:hover {
+            background: #b91c1c;
         }
         .form-actions {
             display: flex;
@@ -272,21 +299,6 @@
         .btn-cancel:hover {
             color: #fff;
             border-color: #fff;
-        }
-        .product-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-        }
-        @media (min-width: 768px) {
-            .product-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-        @media (min-width: 1024px) {
-            .product-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
         }
         .product-item {
             background: var(--card-bg);
@@ -394,19 +406,18 @@
                     <label>Fotografía(s) del Producto</label> 
                 </div>
 
-                <!-- DOS BOTONES INDEPENDIENTES Y CORREGIDOS -->
+                <!-- Botones independientes para fotos y carpetas -->
                 <div class="file-drop-area">
                     <button type="button" class="btn-file" id="btnSeleccionarFoto">📷 Seleccionar Foto(s)...</button>
                     <button type="button" class="btn-file" id="btnSeleccionarCarpeta">📁 Seleccionar Carpeta...</button>
                     
-                    <!-- Inputs ocultos separados -->
                     <input type="file" id="j_foto" accept="image/*" multiple style="display:none;">
                     <input type="file" id="j_carpeta" accept="image/*" multiple webkitdirectory style="display:none;">
                     
                     <span class="file-name" id="textoNombreArchivo">No se ha seleccionado ningún archivo.</span>
                 </div>
 
-                <!-- Previsualización de imágenes seleccionadas -->
+                <!-- Previsualización interactiva con botón de eliminar (✕) por foto -->
                 <div id="previewGallery" class="preview-gallery"></div>
 
                 <div class="field-group" style="margin-bottom: 20px;">
