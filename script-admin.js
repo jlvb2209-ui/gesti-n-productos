@@ -53,7 +53,6 @@ let imagenExistenteUrl = "";
 let categoriasColapsadas = {};
 let archivosParaSubir = [];
 
-// Vincular correctamente los botones a sus respectivos inputs ocultos
 btnFile.addEventListener("click", () => {
     folderInput.value = "";
     fileInput.click();
@@ -61,23 +60,36 @@ btnFile.addEventListener("click", () => {
 
 btnFolder.addEventListener("click", () => {
     fileInput.value = "";
-    folderInput.click(); // ¡Aquí estaba el error anterior que ya quedó corregido!
+    folderInput.click();
 });
 
 function procesarArchivos(input) {
+    const nuevos = Array.from(input.files).filter(f => f.type.startsWith("image/"));
+    archivosParaSubir = archivosParaSubir.concat(nuevos);
+    actualizarVistaPrevia();
+}
+
+fileInput.addEventListener("change", () => procesarArchivos(fileInput));
+folderInput.addEventListener("change", () => procesarArchivos(folderInput));
+
+function actualizarVistaPrevia() {
     previewGallery.innerHTML = "";
-    archivosParaSubir = Array.from(input.files).filter(f => f.type.startsWith("image/"));
     
     if (archivosParaSubir.length > 0) {
         txtFileName.textContent = `${archivosParaSubir.length} imagen(es) seleccionada(s)`;
         
-        archivosParaSubir.forEach(file => {
+        archivosParaSubir.forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const img = document.createElement("img");
-                img.src = e.target.result;
-                img.className = "preview-thumb";
-                previewGallery.appendChild(img);
+                const container = document.createElement("div");
+                container.className = "preview-container";
+                
+                container.innerHTML = `
+                    <img src="${e.target.result}" class="preview-thumb">
+                    <button type="button" class="btn-remove-thumb" data-index="${index}" title="Quitar imagen">✕</button>
+                `;
+                
+                previewGallery.appendChild(container);
             };
             reader.readAsDataURL(file);
         });
@@ -86,8 +98,13 @@ function procesarArchivos(input) {
     }
 }
 
-fileInput.addEventListener("change", () => procesarArchivos(fileInput));
-folderInput.addEventListener("change", () => procesarArchivos(folderInput));
+previewGallery.addEventListener("click", (e) => {
+    if (e.target.classList.contains("btn-remove-thumb")) {
+        const index = Number(e.target.dataset.index);
+        archivosParaSubir.splice(index, 1);
+        actualizarVistaPrevia();
+    }
+});
 
 btnToggleAdmCat.addEventListener("click", () => {
     boxAdmCategorias.style.display = boxAdmCategorias.style.display === "none" || boxAdmCategorias.style.display === "" ? "block" : "none";
@@ -169,10 +186,12 @@ window.prepararEdicion = (id) => {
 
     previewGallery.innerHTML = "";
     if (imagenExistenteUrl) {
-        const img = document.createElement("img");
-        img.src = imagenExistenteUrl;
-        img.className = "preview-thumb";
-        previewGallery.appendChild(img);
+        const container = document.createElement("div");
+        container.className = "preview-container";
+        container.innerHTML = `
+            <img src="${imagenExistenteUrl}" class="preview-thumb">
+        `;
+        previewGallery.appendChild(container);
     }
 
     txtFileName.textContent = "Modificando producto individual existente.";
@@ -293,6 +312,7 @@ form.addEventListener("submit", async (e) => {
                     continue;
                 }
 
+                // Publicar con el nombre exacto sin números automáticos
                 await addDoc(collection(db, "jewelry"), {
                     nombre: nombreBase,
                     precio: precio,
