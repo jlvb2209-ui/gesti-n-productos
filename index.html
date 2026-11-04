@@ -219,7 +219,6 @@
             font-size: 0.85rem;
             color: var(--text-muted);
         }
-        /* Contenedor de previsualización múltiple */
         .preview-gallery {
             display: flex;
             gap: 10px;
@@ -348,7 +347,7 @@
                 <div class="card-title">
                     <span id="kickerForm" style="color:#d4af37; font-size:0.72rem; font-weight:800; text-transform:uppercase;">Nuevo Producto</span>
                     <h2 id="tituloForm">Publicar artículo</h2>
-                    <p id="subtituloForm">Ingresa los detalles, selecciona categoría y sube una o varias fotos (o carpetas) a Google Drive.</p>
+                    <p id="subtituloForm">Ingresa los detalles, selecciona categoría y sube una o varias fotos a Google Drive.</p>
                 </div>
             </div>
             
@@ -385,12 +384,12 @@
                 </div>
 
                 <div class="field-group" style="margin-bottom: 6px;">
-                    <label>Fotografías del Producto (Puedes seleccionar varias imágenes o una carpeta)</label> 
+                    <label>Fotografía(s) del Producto (Individuales o múltiples)</label> 
                 </div>
                 <div class="file-drop-area">
-                    <button type="button" class="btn-file" id="btnSeleccionarFoto">Examinar archivos / carpeta...</button>
-                    <!-- Se agregaron los atributos 'multiple' y 'webkitdirectory' para aceptar múltiples archivos o carpetas -->
-                    <input type="file" id="j_foto" accept="image/*" multiple webkitdirectory style="display:none;">
+                    <button type="button" class="btn-file" id="btnSeleccionarFoto">Examinar archivos...</button>
+                    <!-- SIN webkitdirectory para permitir foto individual o selección múltiple libre -->
+                    <input type="file" id="j_foto" accept="image/*" multiple style="display:none;">
                     <span class="file-name" id="textoNombreArchivo">No se ha seleccionado ningún archivo.</span>
                 </div>
 
@@ -415,8 +414,8 @@
         </div>
 
         <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 12px; color:#d4af37;">Productos Publicados</h2>
-        <div class="product-grid" id="listaInventarioAdmin" style="padding-bottom: 40px;">
-            <!-- Se cargan automáticamente de Firebase -->
+        <div id="listaInventarioAdmin" style="padding-bottom: 40px;">
+            <!-- Se cargan automáticamente agrupados por categoría con flechas -->
         </div>
     </div>
 
