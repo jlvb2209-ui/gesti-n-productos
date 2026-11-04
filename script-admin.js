@@ -52,37 +52,31 @@ let productosCache = {};
 let imagenExistenteUrl = "";
 let categoriasColapsadas = {};
 let archivosParaSubir = [];
-let listaCategoriasRegistradas = []; // Almacena las categorías oficiales de Firebase
-let listaProductosSnapshot = [];
 
 btnFile.addEventListener("click", () => {
     folderInput.value = "";
-    fileInput.value = "";
     fileInput.click();
 });
 
 btnFolder.addEventListener("click", () => {
     fileInput.value = "";
-    folderInput.value = "";
     folderInput.click();
 });
 
-function procesarArchivos(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    archivosParaSubir = Array.from(files).filter(f => f.type.startsWith("image/"));
+function procesarArchivos(input) {
+    const nuevos = Array.from(input.files).filter(f => f.type.startsWith("image/"));
+    archivosParaSubir = archivosParaSubir.concat(nuevos);
     actualizarVistaPrevia();
 }
 
-fileInput.addEventListener("change", procesarArchivos);
-folderInput.addEventListener("change", procesarArchivos);
+fileInput.addEventListener("change", () => procesarArchivos(fileInput));
+folderInput.addEventListener("change", () => procesarArchivos(folderInput));
 
 function actualizarVistaPrevia() {
     previewGallery.innerHTML = "";
     
     if (archivosParaSubir.length > 0) {
-        txtFileName.textContent = `${archivosParaSubir.length} imagen(es) lista(s) para publicar`;
+        txtFileName.textContent = `${archivosParaSubir.length} imagen(es) seleccionada(s)`;
         
         archivosParaSubir.forEach((file, index) => {
             const reader = new FileReader();
@@ -120,21 +114,15 @@ btnToggleAdmCat.addEventListener("click", () => {
 onSnapshot(collection(db, "categories"), (snapshot) => {
     selectCategoria.innerHTML = '<option value="">Selecciona una categoría...</option>';
     listaAdminCats.innerHTML = "";
-    listaCategoriasRegistradas = [];
-
     if (snapshot.empty) {
-        listaAdminCats.innerHTML = `<p style="font-size:0.8rem; color:#a3a3a3; margin:0;">No hay categorías registradas.</p>";
-        renderizarInventarioAgrupado();
+        listaAdminCats.innerHTML = `<p style="font-size:0.8rem; color:#a3a3a3; margin:0;">No hay categorías registradas.</p>`;
         return;
     }
-
     snapshot.forEach((docSnap) => {
         const catData = docSnap.data();
         const catId = docSnap.id;
         const nombre = catData.nombre || "";
-        const valor = nombre.trim();
-
-        listaCategoriasRegistradas.push(valor.toUpperCase());
+        const valor = nombre.trim().toLowerCase();
 
         const opt = document.createElement("option");
         opt.value = valor;
@@ -149,8 +137,6 @@ onSnapshot(collection(db, "categories"), (snapshot) => {
         `;
         listaAdminCats.appendChild(row);
     });
-
-    renderizarInventarioAgrupado();
 });
 
 btnAnadirCat.addEventListener("click", async () => {
@@ -202,11 +188,14 @@ window.prepararEdicion = (id) => {
     if (imagenExistenteUrl) {
         const container = document.createElement("div");
         container.className = "preview-container";
-        container.innerHTML = `<img src="${imagenExistenteUrl}" class="preview-thumb">`;
+        container.innerHTML = `
+            <img src="${imagenExistenteUrl}" class="preview-thumb">
+        `;
         previewGallery.appendChild(container);
     }
 
     txtFileName.textContent = "Modificando producto individual existente.";
+
     kickerForm.textContent = "MODIFICAR PRODUCTO";
     tituloForm.textContent = "Editar artículo";
     subtituloForm.textContent = `Actualizando los detalles del producto ID: ${id}`;
@@ -242,7 +231,7 @@ form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     if (!editandoId && archivosParaSubir.length === 0) {
-        alert("Por favor selecciona al menos una foto o una carpeta antes de publicar.");
+        alert("Por favor selecciona al menos una foto o carpeta.");
         return;
     }
 
@@ -252,7 +241,7 @@ form.addEventListener("submit", async (e) => {
     try {
         const nombreBase = document.getElementById("j_nombre").value.trim();
         const precio = Number(document.getElementById("j_precio").value);
-        const categoriaSeleccionada = selectCategoria.value; 
+        const categoria = selectCategoria.value;
         const descripcion = document.getElementById("j_descripcion").value.trim();
 
         if (editandoId) {
@@ -278,7 +267,7 @@ form.addEventListener("submit", async (e) => {
                 
                 const dataDrive = await res.json();
                 if (dataDrive.status !== "success") {
-                    throw new Error(dataDrive.message || "Error al subir la imagen a Drive.");
+                    throw new Error(dataDrive.message || "Error al subir la imagen.");
                 }
                 urlFinal = dataDrive.url;
             }
@@ -287,7 +276,7 @@ form.addEventListener("submit", async (e) => {
             await updateDoc(doc(db, "jewelry", editandoId), {
                 nombre: nombreBase,
                 precio: precio,
-                categoria: categoriaSeleccionada,
+                categoria: categoria,
                 descripcion: descripcion,
                 imagenUrl: urlFinal,
                 actualizado: Date.now()
@@ -300,7 +289,7 @@ form.addEventListener("submit", async (e) => {
 
             for (let i = 0; i < archivosParaSubir.length; i++) {
                 const file = archivosParaSubir[i];
-                mensajeEstado.textContent = `Subiendo imagen ${i + 1} de ${archivosParaSubir.length} a Google Drive...`;
+                mensajeEstado.textContent = `Procesando imagen ${i + 1} de ${archivosParaSubir.length}...`;
 
                 const base64 = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -323,10 +312,11 @@ form.addEventListener("submit", async (e) => {
                     continue;
                 }
 
+                // Publicar con el nombre exacto sin números automáticos
                 await addDoc(collection(db, "jewelry"), {
                     nombre: nombreBase,
                     precio: precio,
-                    categoria: categoriaSeleccionada,
+                    categoria: categoria,
                     descripcion: descripcion,
                     imagenUrl: dataDrive.url,
                     creado: Date.now() + i
@@ -350,12 +340,15 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
-// --- LISTAR Y GESTIONAR INVENTARIO AGRUPADO ---
+// --- FUNCIÓN GLOBAL PARA COLAPSAR / EXPANDIR CATEGORÍAS ---
 window.toggleCategoriaColapsar = (catNombre) => {
     categoriasColapsadas[catNombre] = !categoriasColapsadas[catNombre];
     renderizarInventarioAgrupado();
 };
 
+let listaProductosSnapshot = [];
+
+// --- LISTAR Y GESTIONAR INVENTARIO AGRUPADO POR CATEGORÍA CON FLECHAS ---
 const q = query(collection(db, "jewelry"), orderBy("creado", "desc"));
 onSnapshot(q, (snapshot) => {
     listaProductosSnapshot = [];
@@ -374,28 +367,18 @@ onSnapshot(q, (snapshot) => {
 function renderizarInventarioAgrupado() {
     listaInventario.innerHTML = "";
 
-    if (listaCategoriasRegistradas.length === 0 && listaProductosSnapshot.length === 0) {
-        listaInventario.innerHTML = "<p style='color:#a3a3a3; grid-column: 1 / -1;'>No hay categorías ni productos registrados aún.</p>";
+    if (listaProductosSnapshot.length === 0) {
+        listaInventario.innerHTML = "<p style='color:#a3a3a3; grid-column: 1 / -1;'>No hay productos registrados aún.</p>";
         return;
     }
 
     let porCategoria = {};
-
-    // 1. Inicializar TODAS las categorías oficiales creadas en Firebase (para que nunca desaparezcan)
-    listaCategoriasRegistradas.forEach(cat => {
-        porCategoria[cat] = [];
-    });
-
-    // 2. Colocar cada producto en su categoría correspondiente
     listaProductosSnapshot.forEach(item => {
-        let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
-        if (!porCategoria[cat]) {
-            porCategoria[cat] = [];
-        }
+        const cat = item.categoria ? item.categoria.toUpperCase() : "SIN CATEGORÍA";
+        if (!porCategoria[cat]) porCategoria[cat] = [];
         porCategoria[cat].push(item);
     });
 
-    // 3. Renderizar cada categoría en pantalla
     for (const [cat, productos] of Object.entries(porCategoria)) {
         const estaColapsada = !!categoriasColapsadas[cat];
         const flecha = estaColapsada ? "▶" : "▼";
@@ -417,28 +400,23 @@ function renderizarInventarioAgrupado() {
 
         const gridProductos = seccionCat.querySelector(`#grid-cat-${cat}`);
 
-        if (productos.length === 0) {
-            gridProductos.style.display = "block";
-            gridProductos.innerHTML = `<p style="color: #737373; font-size: 0.85rem; margin: 0;">No hay productos en esta categoría.</p>`;
-        } else {
-            productos.forEach(item => {
-                const card = document.createElement("div");
-                card.className = "product-item";
-                card.innerHTML = `
-                    <div>
-                        <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
-                        <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
-                        <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
-                        <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
-                    </div>
-                    <div class="product-actions">
-                        <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
-                        <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
-                    </div>
-                `;
-                gridProductos.appendChild(card);
-            });
-        }
+        productos.forEach(item => {
+            const card = document.createElement("div");
+            card.className = "product-item";
+            card.innerHTML = `
+                <div>
+                    <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
+                    <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
+                    <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
+                    <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
+                </div>
+                <div class="product-actions">
+                    <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
+                    <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
+                </div>
+            `;
+            gridProductos.appendChild(card);
+        });
 
         listaInventario.appendChild(seccionCat);
     }
