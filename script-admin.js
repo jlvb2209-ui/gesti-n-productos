@@ -41,7 +41,6 @@ const inputNuevaCat = document.getElementById("nuevaCategoriaInput");
 const btnAnadirCat = document.getElementById("btnAnadirCategoria");
 const listaAdminCats = document.getElementById("listaAdminCategorias");
 
-// Elementos de cabecera del formulario
 const kickerForm = document.getElementById("kickerForm");
 const tituloForm = document.getElementById("tituloForm");
 const subtituloForm = document.getElementById("subtituloForm");
@@ -59,7 +58,6 @@ fileInput.addEventListener("change", () => {
     if (archivos.length > 0) {
         txtFileName.textContent = `${archivos.length} archivo(s) seleccionado(s)`;
         
-        // Generar previsualizaciones de todas las imágenes seleccionadas
         Array.from(archivos).forEach(file => {
             if (file.type.startsWith("image/")) {
                 const reader = new FileReader();
@@ -77,7 +75,6 @@ fileInput.addEventListener("change", () => {
     }
 });
 
-// Mostrar/Ocultar el panel de administración de categorías
 btnToggleAdmCat.addEventListener("click", () => {
     boxAdmCategorias.style.display = boxAdmCategorias.style.display === "none" || boxAdmCategorias.style.display === "" ? "block" : "none";
 });
@@ -142,7 +139,7 @@ listaAdminCats.addEventListener("click", async (e) => {
     }
 });
 
-// --- PREPARAR EDICIÓN DE PRODUCTO ---
+// --- PREPARAR EDICIÓN ---
 window.prepararEdicion = (id) => {
     const prod = productosCache[id];
     if (!prod) return;
@@ -155,7 +152,6 @@ window.prepararEdicion = (id) => {
     
     imagenesExistentesUrl = prod.imagenes || (prod.imagenUrl ? [prod.imagenUrl] : []);
 
-    // Mostrar las imágenes actuales en la previsualización
     previewGallery.innerHTML = "";
     imagenesExistentesUrl.forEach(url => {
         const img = document.createElement("img");
@@ -166,7 +162,6 @@ window.prepararEdicion = (id) => {
 
     txtFileName.textContent = `${imagenesExistentesUrl.length} imagen(es) actual(es) guardada(s)`;
 
-    // Cambiar textos del formulario
     kickerForm.textContent = "MODIFICAR PRODUCTO";
     tituloForm.textContent = "Editar artículo";
     subtituloForm.textContent = `Actualizando los detalles del producto ID: ${id}`;
@@ -176,7 +171,6 @@ window.prepararEdicion = (id) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// --- CANCELAR EDICIÓN ---
 btnCancelar.addEventListener("click", () => {
     resetearFormulario();
 });
@@ -195,30 +189,29 @@ function resetearFormulario() {
     mensajeEstado.textContent = "";
 }
 
-// --- PUBLICAR O ACTUALIZAR PRODUCTO ---
+// --- SUBIR CADA IMAGEN INDIVIDUALMENTE Y GUARDAR ---
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const archivos = fileInput.files;
 
     if (!editandoId && archivos.length === 0) {
-        alert("Por favor selecciona al menos una imagen o carpeta con imágenes.");
+        alert("Por favor selecciona al menos una imagen o carpeta.");
         return;
     }
 
     btnSubmit.disabled = true;
     mensajeEstado.style.color = "#d4af37";
-    mensajeEstado.textContent = "Procesando imágenes...";
 
     try {
         let urlsNuevas = [];
 
-        // Subir nuevas imágenes si se seleccionaron
+        // Subida individual de cada archivo seleccionado
         if (archivos.length > 0) {
             for (let i = 0; i < archivos.length; i++) {
                 const file = archivos[i];
                 if (!file.type.startsWith("image/")) continue;
 
-                btnSubmit.textContent = `Subiendo imagen ${i + 1} de ${archivos.length} a Drive...`;
+                mensajeEstado.textContent = `Subiendo imagen ${i + 1} de ${archivos.length} individualmente a Drive...`;
 
                 const base64 = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -234,15 +227,15 @@ form.addEventListener("submit", async (e) => {
                         filename: `JOYERIA_${Date.now()}_${file.name}`
                     })
                 });
+                
                 const dataDrive = await res.json();
                 if (dataDrive.status !== "success") {
-                    throw new Error(dataDrive.message || "Error al subir a Google Drive");
+                    throw new Error(dataDrive.message || `Error al subir la imagen ${file.name}`);
                 }
                 urlsNuevas.push(dataDrive.url);
             }
         }
 
-        // Combinar o asignar imágenes finales
         const imagenesFinales = archivos.length > 0 ? urlsNuevas : imagenesExistentesUrl;
         const imagenUrlPrincipal = imagenesFinales.length > 0 ? imagenesFinales[0] : "";
 
@@ -251,12 +244,13 @@ form.addEventListener("submit", async (e) => {
             precio: Number(document.getElementById("j_precio").value),
             categoria: selectCategoria.value,
             descripcion: document.getElementById("j_descripcion").value.trim(),
-            imagenUrl: imagenUrlPrincipal, // Principal para compatibilidad
-            imagenes: imagenesFinales     // Arreglo completo con todas las fotos
+            imagenUrl: imagenUrlPrincipal,
+            imagenes: imagenesFinales
         };
 
+        mensajeEstado.textContent = "Guardando datos en Firebase...";
+
         if (editandoId) {
-            btnSubmit.textContent = "Actualizando en Firebase...";
             await updateDoc(doc(db, "jewelry", editandoId), {
                 ...datosProducto,
                 actualizado: Date.now()
@@ -264,7 +258,6 @@ form.addEventListener("submit", async (e) => {
             mensajeEstado.style.color = "#16a34a";
             mensajeEstado.textContent = "¡Producto actualizado con éxito!";
         } else {
-            btnSubmit.textContent = "Guardando en Firebase...";
             await addDoc(collection(db, "jewelry"), {
                 ...datosProducto,
                 creado: Date.now()
@@ -284,7 +277,7 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
-// --- GESTIÓN DE PRODUCTOS PUBLICADOS ---
+// --- LISTAR Y GESTIONAR INVENTARIO ---
 const q = query(collection(db, "jewelry"), orderBy("creado", "desc"));
 onSnapshot(q, (snapshot) => {
     listaInventario.innerHTML = "";
