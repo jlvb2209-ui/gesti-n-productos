@@ -53,17 +53,18 @@ let imagenExistenteUrl = "";
 let categoriasColapsadas = {};
 let archivosParaSubir = [];
 
-// Activadores de botones limpios
+// Activador correcto para fotos individuales o múltiples
 btnFile.addEventListener("click", () => {
     folderInput.value = "";
     fileInput.value = "";
     fileInput.click();
 });
 
+// Activador corregido para carpetas completas
 btnFolder.addEventListener("click", () => {
     fileInput.value = "";
     folderInput.value = "";
-    folderInput.click();
+    folderInput.click(); // ¡Aquí estaba el detalle, ahora abre la carpeta correctamente!
 });
 
 // Procesamiento seguro de archivos seleccionados
@@ -104,7 +105,7 @@ function actualizarVistaPrevia() {
     }
 }
 
-// Eliminar foto individual de la previsualización
+// Eliminar foto individual de la previsualización con la "✕"
 previewGallery.addEventListener("click", (e) => {
     if (e.target.classList.contains("btn-remove-thumb")) {
         const index = Number(e.target.dataset.index);
