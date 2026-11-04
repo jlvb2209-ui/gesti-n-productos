@@ -53,19 +53,28 @@ let imagenExistenteUrl = "";
 let categoriasColapsadas = {};
 let archivosParaSubir = [];
 
+// Al hacer clic en fotos, limpiamos el input de carpeta y reseteamos la selección anterior
 btnFile.addEventListener("click", () => {
     folderInput.value = "";
+    fileInput.value = "";
+    archivosParaSubir = [];
+    previewGallery.innerHTML = "";
     fileInput.click();
 });
 
+// Al hacer clic en carpeta, limpiamos el input de fotos y reseteamos la selección anterior
 btnFolder.addEventListener("click", () => {
     fileInput.value = "";
+    folderInput.value = "";
+    archivosParaSubir = [];
+    previewGallery.innerHTML = "";
     folderInput.click();
 });
 
 function procesarArchivos(input) {
     const nuevos = Array.from(input.files).filter(f => f.type.startsWith("image/"));
-    archivosParaSubir = archivosParaSubir.concat(nuevos);
+    // Reemplaza por completo con los nuevos archivos de esta selección
+    archivosParaSubir = nuevos;
     actualizarVistaPrevia();
 }
 
@@ -312,7 +321,6 @@ form.addEventListener("submit", async (e) => {
                     continue;
                 }
 
-                // Publicar con el nombre exacto sin números automáticos
                 await addDoc(collection(db, "jewelry"), {
                     nombre: nombreBase,
                     precio: precio,
