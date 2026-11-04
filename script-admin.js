@@ -52,6 +52,8 @@ let productosCache = {};
 let imagenExistenteUrl = "";
 let categoriasColapsadas = {};
 let archivosParaSubir = [];
+let listaCategoriasRegistradas = []; // Almacena las categorías oficiales de Firebase
+let listaProductosSnapshot = [];
 
 btnFile.addEventListener("click", () => {
     folderInput.value = "";
@@ -114,19 +116,25 @@ btnToggleAdmCat.addEventListener("click", () => {
     boxAdmCategorias.style.display = boxAdmCategorias.style.display === "none" || boxAdmCategorias.style.display === "" ? "block" : "none";
 });
 
-// --- GESTIÓN DE CATEGORÍAS ---
+// --- GESTIÓN DE CATEGORÍAS EN TIEMPO REAL ---
 onSnapshot(collection(db, "categories"), (snapshot) => {
     selectCategoria.innerHTML = '<option value="">Selecciona una categoría...</option>';
     listaAdminCats.innerHTML = "";
+    listaCategoriasRegistradas = [];
+
     if (snapshot.empty) {
-        listaAdminCats.innerHTML = `<p style="font-size:0.8rem; color:#a3a3a3; margin:0;">No hay categorías registradas.</p>`;
+        listaAdminCats.innerHTML = `<p style="font-size:0.8rem; color:#a3a3a3; margin:0;">No hay categorías registradas.</p>";
+        renderizarInventarioAgrupado();
         return;
     }
+
     snapshot.forEach((docSnap) => {
         const catData = docSnap.data();
         const catId = docSnap.id;
         const nombre = catData.nombre || "";
-        const valor = nombre.trim(); // Mantenemos el nombre exacto
+        const valor = nombre.trim();
+
+        listaCategoriasRegistradas.push(valor.toUpperCase());
 
         const opt = document.createElement("option");
         opt.value = valor;
@@ -141,6 +149,8 @@ onSnapshot(collection(db, "categories"), (snapshot) => {
         `;
         listaAdminCats.appendChild(row);
     });
+
+    renderizarInventarioAgrupado();
 });
 
 btnAnadirCat.addEventListener("click", async () => {
@@ -242,7 +252,6 @@ form.addEventListener("submit", async (e) => {
     try {
         const nombreBase = document.getElementById("j_nombre").value.trim();
         const precio = Number(document.getElementById("j_precio").value);
-        // USAMOS LA CATEGORÍA SELECCIONADA EN EL MENÚ DESPLEGABLE DEL FORMULARIO
         const categoriaSeleccionada = selectCategoria.value; 
         const descripcion = document.getElementById("j_descripcion").value.trim();
 
@@ -314,7 +323,6 @@ form.addEventListener("submit", async (e) => {
                     continue;
                 }
 
-                // CADA PRODUCTO DE LA CARPETA SE GUARDA CON LA CATEGORÍA DEL SELECTOR
                 await addDoc(collection(db, "jewelry"), {
                     nombre: nombreBase,
                     precio: precio,
@@ -348,8 +356,6 @@ window.toggleCategoriaColapsar = (catNombre) => {
     renderizarInventarioAgrupado();
 };
 
-let listaProductosSnapshot = [];
-
 const q = query(collection(db, "jewelry"), orderBy("creado", "desc"));
 onSnapshot(q, (snapshot) => {
     listaProductosSnapshot = [];
@@ -368,19 +374,28 @@ onSnapshot(q, (snapshot) => {
 function renderizarInventarioAgrupado() {
     listaInventario.innerHTML = "";
 
-    if (listaProductosSnapshot.length === 0) {
-        listaInventario.innerHTML = "<p style='color:#a3a3a3; grid-column: 1 / -1;'>No hay productos registrados aún.</p>";
+    if (listaCategoriasRegistradas.length === 0 && listaProductosSnapshot.length === 0) {
+        listaInventario.innerHTML = "<p style='color:#a3a3a3; grid-column: 1 / -1;'>No hay categorías ni productos registrados aún.</p>";
         return;
     }
 
     let porCategoria = {};
+
+    // 1. Inicializar TODAS las categorías oficiales creadas en Firebase (para que nunca desaparezcan)
+    listaCategoriasRegistradas.forEach(cat => {
+        porCategoria[cat] = [];
+    });
+
+    // 2. Colocar cada producto en su categoría correspondiente
     listaProductosSnapshot.forEach(item => {
-        // Agrupación limpia basada en la categoría real del producto
         let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
-        if (!porCategoria[cat]) porCategoria[cat] = [];
+        if (!porCategoria[cat]) {
+            porCategoria[cat] = [];
+        }
         porCategoria[cat].push(item);
     });
 
+    // 3. Renderizar cada categoría en pantalla
     for (const [cat, productos] of Object.entries(porCategoria)) {
         const estaColapsada = !!categoriasColapsadas[cat];
         const flecha = estaColapsada ? "▶" : "▼";
@@ -402,23 +417,28 @@ function renderizarInventarioAgrupado() {
 
         const gridProductos = seccionCat.querySelector(`#grid-cat-${cat}`);
 
-        productos.forEach(item => {
-            const card = document.createElement("div");
-            card.className = "product-item";
-            card.innerHTML = `
-                <div>
-                    <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
-                    <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
-                    <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
-                    <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
-                </div>
-                <div class="product-actions">
-                    <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
-                    <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
-                </div>
-            `;
-            gridProductos.appendChild(card);
-        });
+        if (productos.length === 0) {
+            gridProductos.style.display = "block";
+            gridProductos.innerHTML = `<p style="color: #737373; font-size: 0.85rem; margin: 0;">No hay productos en esta categoría.</p>`;
+        } else {
+            productos.forEach(item => {
+                const card = document.createElement("div");
+                card.className = "product-item";
+                card.innerHTML = `
+                    <div>
+                        <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
+                        <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
+                        <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
+                        <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
+                    </div>
+                    <div class="product-actions">
+                        <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
+                        <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
+                    </div>
+                `;
+                gridProductos.appendChild(card);
+            });
+        }
 
         listaInventario.appendChild(seccionCat);
     }
