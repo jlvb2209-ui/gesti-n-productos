@@ -54,21 +54,6 @@
             font-size: 0.9rem;
             font-weight: 800;
         }
-        .btn-header {
-            background: transparent;
-            border: 1px solid var(--gold);
-            color: var(--gold);
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        .btn-header:hover {
-            background: var(--gold);
-            color: #000;
-        }
         .banner-header {
             background-color: var(--bg-header);
             color: #ffffff;
@@ -134,7 +119,6 @@
         .input-control:focus {
             border-color: var(--gold);
         }
-        /* Botón pequeño para abrir el administrador de categorías */
         .btn-adm-toggle {
             background: #262626;
             border: 1px solid var(--border-color);
@@ -149,7 +133,6 @@
         .btn-adm-toggle:hover {
             background: #333;
         }
-        /* Panel desplegable de categorías */
         .category-admin-box {
             background: var(--input-bg);
             border: 1px solid var(--border-color);
@@ -219,7 +202,8 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
         }
         .btn-file {
             background: #262626;
@@ -235,13 +219,31 @@
             font-size: 0.85rem;
             color: var(--text-muted);
         }
+        /* Contenedor de previsualización múltiple */
+        .preview-gallery {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .preview-thumb {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--gold);
+        }
+        .form-actions {
+            display: flex;
+            gap: 12px;
+        }
         .btn-submit {
             background: var(--gold);
             color: #000000;
             border: none;
             border-radius: 10px;
             padding: 16px;
-            width: 100%;
+            flex: 1;
             font-size: 1rem;
             font-weight: 700;
             cursor: pointer;
@@ -249,6 +251,36 @@
         }
         .btn-submit:hover {
             background: #f3e5ab;
+        }
+        .btn-cancel {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px 24px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: none;
+        }
+        .btn-cancel:hover {
+            color: #fff;
+            border-color: #fff;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        @media (min-width: 768px) {
+            .product-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        @media (min-width: 1024px) {
+            .product-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
         }
         .product-item {
             background: var(--card-bg);
@@ -266,6 +298,22 @@
             border-radius: 6px;
             background: #111;
         }
+        .product-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-edit {
+            background: #1e3a8a;
+            color: #93c5fd;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            flex: 1;
+        }
         .btn-delete {
             background: #fee2e2;
             color: #b91c1c;
@@ -274,8 +322,8 @@
             border-radius: 6px;
             font-weight: 600;
             font-size: 0.8rem;
-            margin-top: 8px;
             cursor: pointer;
+            flex: 1;
         }
     </style>
 </head>
@@ -285,27 +333,25 @@
             <div class="avatar-circle">GA</div>
             <span>GRACIA ACCESORIOS</span>
         </div>
-        
     </div>
     
     <div class="banner-header">
-        <div class="w">
+        <div class="w" style="max-width: 1200px; margin: 0 auto; padding: 0 16px;">
             <span style="background: rgba(212,175,55,0.15); color:#d4af37; font-size:0.72rem; font-weight:800; padding:4px 12px; border-radius:20px; text-transform:uppercase;">Inventario y Tienda</span>
             <h1>Gestión de Productos</h1>
-            
         </div>
     </div>
-
-    <div class="w">
+    
+    <div class="w" style="max-width: 1200px; margin: 0 auto; padding: 0 16px;">
         <div class="card-panel">
             <div class="card-header-flex">
                 <div class="card-title">
-                    <span style="color:#d4af37; font-size:0.72rem; font-weight:800; text-transform:uppercase;">Nuevo Producto</span>
-                    <h2>Publicar artículo</h2>
-                    <p>Ingresa los detalles, selecciona categoría y sube la foto a Google Drive.</p>
+                    <span id="kickerForm" style="color:#d4af37; font-size:0.72rem; font-weight:800; text-transform:uppercase;">Nuevo Producto</span>
+                    <h2 id="tituloForm">Publicar artículo</h2>
+                    <p id="subtituloForm">Ingresa los detalles, selecciona categoría y sube una o varias fotos (o carpetas) a Google Drive.</p>
                 </div>
             </div>
-
+            
             <form id="formPublicarJoya">
                 <div class="form-grid">
                     <div class="field-group">
@@ -327,7 +373,7 @@
                     </div>
                 </div>
 
-                <!-- Panel oculto/desplegable para administrar categorías -->
+                <!-- Panel desplegable de categorías -->
                 <div id="boxAdmCategorias" class="category-admin-box" style="display: none;">
                     <h3 style="margin: 0 0 4px 0; font-size: 0.95rem; color: var(--gold);">Administrar Categorías Principales</h3>
                     <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: var(--text-muted);">Añade una categoría nueva o elimina las existentes.</p>
@@ -339,22 +385,31 @@
                 </div>
 
                 <div class="field-group" style="margin-bottom: 6px;">
-                    <label>Fotografía del Producto (Google Drive) *</label> 
+                    <label>Fotografías del Producto (Puedes seleccionar varias imágenes o una carpeta)</label> 
                 </div>
                 <div class="file-drop-area">
-                    <button type="button" class="btn-file" id="btnSeleccionarFoto">Examinar...</button>
-                    <input type="file" id="j_foto" accept="image/*" style="display:none;">
+                    <button type="button" class="btn-file" id="btnSeleccionarFoto">Examinar archivos / carpeta...</button>
+                    <!-- Se agregaron los atributos 'multiple' y 'webkitdirectory' para aceptar múltiples archivos o carpetas -->
+                    <input type="file" id="j_foto" accept="image/*" multiple webkitdirectory style="display:none;">
                     <span class="file-name" id="textoNombreArchivo">No se ha seleccionado ningún archivo.</span>
                 </div>
+
+                <!-- Previsualización de imágenes seleccionadas -->
+                <div id="previewGallery" class="preview-gallery"></div>
 
                 <div class="field-group" style="margin-bottom: 20px;">
                     <label for="j_descripcion">Descripción del producto *</label>
                     <textarea id="j_descripcion" class="input-control" rows="3" placeholder="Detalles, material, quilates..." required></textarea>
                 </div>
 
-                <button type="submit" class="btn-submit" id="btnGuardar">
-                    Subir foto a Google Drive y Publicar
-                </button>
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit" id="btnGuardar">
+                        Subir a Google Drive y Publicar
+                    </button>
+                    <button type="button" class="btn-cancel" id="btnCancelar">
+                        Cancelar edición
+                    </button>
+                </div>
                 <p id="mensajeEstado" style="text-align:center; font-size:0.9rem; margin-top:10px; font-weight:600;"></p>
             </form>
         </div>
