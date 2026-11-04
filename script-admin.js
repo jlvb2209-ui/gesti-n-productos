@@ -27,7 +27,9 @@ const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 
 const form = document.getElementById("formPublicarJoya");
 const fileInput = document.getElementById("j_foto");
+const folderInput = document.getElementById("j_carpeta");
 const btnFile = document.getElementById("btnSeleccionarFoto");
+const btnFolder = document.getElementById("btnSeleccionarCarpeta");
 const txtFileName = document.getElementById("textoNombreArchivo");
 const previewGallery = document.getElementById("previewGallery");
 const btnSubmit = document.getElementById("btnGuardar");
@@ -49,17 +51,27 @@ let editandoId = null;
 let productosCache = {};
 let imagenExistenteUrl = "";
 let categoriasColapsadas = {};
+let archivosParaSubir = [];
 
-btnFile.addEventListener("click", () => fileInput.click());
+// Manejadores para abrir los selectores correspondientes
+btnFile.addEventListener("click", () => {
+    folderInput.value = "";
+    fileInput.click();
+});
 
-fileInput.addEventListener("change", () => {
+btnFolder.addEventListener("click", () => {
+    fileInput.value = "";
+    folderInput.click();
+});
+
+function procesarArchivosSeleccionados(input) {
     previewGallery.innerHTML = "";
-    const archivos = Array.from(fileInput.files).filter(f => f.type.startsWith("image/"));
+    archivosParaSubir = Array.from(input.files).filter(f => f.type.startsWith("image/"));
     
-    if (archivos.length > 0) {
-        txtFileName.textContent = `${archivos.length} imagen(es) seleccionada(s)`;
+    if (archivosParaSubir.length > 0) {
+        txtFileName.textContent = `${archivosParaSubir.length} imagen(es) seleccionada(s)`;
         
-        archivos.forEach(file => {
+        archivosParaSubir.forEach(file => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = document.createElement("img");
@@ -72,7 +84,10 @@ fileInput.addEventListener("change", () => {
     } else {
         txtFileName.textContent = "No se ha seleccionado ningún archivo.";
     }
-});
+}
+
+fileInput.addEventListener("change", () => procesarArchivosSeleccionados(fileInput));
+folderInput.addEventListener("change", () => procesarArchivosSeleccionados(folderInput));
 
 btnToggleAdmCat.addEventListener("click", () => {
     boxAdmCategorias.style.display = boxAdmCategorias.style.display === "none" || boxAdmCategorias.style.display === "" ? "block" : "none";
@@ -150,6 +165,7 @@ window.prepararEdicion = (id) => {
     document.getElementById("j_descripcion").value = prod.descripcion || "";
     
     imagenExistenteUrl = prod.imagenUrl || "";
+    archivosParaSubir = [];
 
     previewGallery.innerHTML = "";
     if (imagenExistenteUrl) {
@@ -177,13 +193,15 @@ btnCancelar.addEventListener("click", () => {
 function resetearFormulario() {
     editandoId = null;
     imagenExistenteUrl = "";
+    archivosParaSubir = [];
     form.reset();
     fileInput.value = "";
+    folderInput.value = "";
     previewGallery.innerHTML = "";
     txtFileName.textContent = "No se ha seleccionado ningún archivo.";
     kickerForm.textContent = "Nuevo Producto";
     tituloForm.textContent = "Publicar artículo";
-    subtituloForm.textContent = "Ingresa los detalles, selecciona categoría y sube una o varias fotos (o carpetas) a Google Drive.";
+    subtituloForm.textContent = "Ingresa los detalles, selecciona categoría y sube una foto o carpeta de imágenes a Google Drive.";
     btnSubmit.textContent = "Subir a Google Drive y Publicar";
     btnCancelar.style.display = "none";
     mensajeEstado.textContent = "";
@@ -192,10 +210,9 @@ function resetearFormulario() {
 // --- PUBLICAR O EDITAR PRODUCTO ---
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const archivos = Array.from(fileInput.files).filter(f => f.type.startsWith("image/"));
 
-    if (!editandoId && archivos.length === 0) {
-        alert("Por favor selecciona al menos una imagen, foto individual o carpeta.");
+    if (!editandoId && archivosParaSubir.length === 0) {
+        alert("Por favor selecciona al menos una foto individual o una carpeta de imágenes.");
         return;
     }
 
@@ -211,9 +228,9 @@ form.addEventListener("submit", async (e) => {
         if (editandoId) {
             let urlFinal = imagenExistenteUrl;
 
-            if (archivos.length > 0) {
+            if (archivosParaSubir.length > 0) {
                 mensajeEstado.textContent = "Subiendo nueva imagen a Google Drive...";
-                const file = archivos[0];
+                const file = archivosParaSubir[0];
                 const base64 = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onload = () => resolve(reader.result);
@@ -251,9 +268,9 @@ form.addEventListener("submit", async (e) => {
         } else {
             let creados = 0;
 
-            for (let i = 0; i < archivos.length; i++) {
-                const file = archivos[i];
-                mensajeEstado.textContent = `Procesando imagen ${i + 1} de ${archivos.length}...`;
+            for (let i = 0; i < archivosParaSubir.length; i++) {
+                const file = archivosParaSubir[i];
+                mensajeEstado.textContent = `Procesando imagen ${i + 1} de ${archivosParaSubir.length}...`;
 
                 const base64 = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -277,7 +294,7 @@ form.addEventListener("submit", async (e) => {
                 }
 
                 await addDoc(collection(db, "jewelry"), {
-                    nombre: archivos.length > 1 ? `${nombreBase} (${i + 1})` : nombreBase,
+                    nombre: archivosParaSubir.length > 1 ? `${nombreBase} (${i + 1})` : nombreBase,
                     precio: precio,
                     categoria: categoria,
                     descripcion: descripcion,
