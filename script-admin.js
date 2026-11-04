@@ -278,8 +278,9 @@ form.addEventListener("submit", async (e) => {
                     continue;
                 }
 
+                // AQUÍ SE QUITÓ EL NÚMERO AUTOMÁTICO: Ahora guarda exactamente el nombre ingresado
                 await addDoc(collection(db, "jewelry"), {
-                    nombre: archivosParaSubir.length > 1 ? `${nombreBase} (${i + 1})` : nombreBase,
+                    nombre: nombreBase,
                     precio: precio,
                     categoria: categoria,
                     descripcion: descripcion,
