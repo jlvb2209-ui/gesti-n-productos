@@ -53,21 +53,18 @@ let imagenExistenteUrl = "";
 let categoriasColapsadas = {};
 let archivosParaSubir = [];
 
-// Activador correcto para fotos individuales o múltiples
 btnFile.addEventListener("click", () => {
     folderInput.value = "";
     fileInput.value = "";
     fileInput.click();
 });
 
-// Activador corregido para carpetas completas
 btnFolder.addEventListener("click", () => {
     fileInput.value = "";
     folderInput.value = "";
-    folderInput.click(); // ¡Aquí estaba el detalle, ahora abre la carpeta correctamente!
+    folderInput.click();
 });
 
-// Procesamiento seguro de archivos seleccionados
 function procesarArchivos(e) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -105,7 +102,6 @@ function actualizarVistaPrevia() {
     }
 }
 
-// Eliminar foto individual de la previsualización con la "✕"
 previewGallery.addEventListener("click", (e) => {
     if (e.target.classList.contains("btn-remove-thumb")) {
         const index = Number(e.target.dataset.index);
@@ -130,7 +126,7 @@ onSnapshot(collection(db, "categories"), (snapshot) => {
         const catData = docSnap.data();
         const catId = docSnap.id;
         const nombre = catData.nombre || "";
-        const valor = nombre.trim().toLowerCase();
+        const valor = nombre.trim(); // Mantenemos el nombre exacto
 
         const opt = document.createElement("option");
         opt.value = valor;
@@ -246,7 +242,8 @@ form.addEventListener("submit", async (e) => {
     try {
         const nombreBase = document.getElementById("j_nombre").value.trim();
         const precio = Number(document.getElementById("j_precio").value);
-        const categoria = selectCategoria.value;
+        // USAMOS LA CATEGORÍA SELECCIONADA EN EL MENÚ DESPLEGABLE DEL FORMULARIO
+        const categoriaSeleccionada = selectCategoria.value; 
         const descripcion = document.getElementById("j_descripcion").value.trim();
 
         if (editandoId) {
@@ -281,7 +278,7 @@ form.addEventListener("submit", async (e) => {
             await updateDoc(doc(db, "jewelry", editandoId), {
                 nombre: nombreBase,
                 precio: precio,
-                categoria: categoria,
+                categoria: categoriaSeleccionada,
                 descripcion: descripcion,
                 imagenUrl: urlFinal,
                 actualizado: Date.now()
@@ -317,10 +314,11 @@ form.addEventListener("submit", async (e) => {
                     continue;
                 }
 
+                // CADA PRODUCTO DE LA CARPETA SE GUARDA CON LA CATEGORÍA DEL SELECTOR
                 await addDoc(collection(db, "jewelry"), {
                     nombre: nombreBase,
                     precio: precio,
-                    categoria: categoria,
+                    categoria: categoriaSeleccionada,
                     descripcion: descripcion,
                     imagenUrl: dataDrive.url,
                     creado: Date.now() + i
@@ -377,7 +375,8 @@ function renderizarInventarioAgrupado() {
 
     let porCategoria = {};
     listaProductosSnapshot.forEach(item => {
-        const cat = item.categoria ? item.categoria.toUpperCase() : "SIN CATEGORÍA";
+        // Agrupación limpia basada en la categoría real del producto
+        let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
         if (!porCategoria[cat]) porCategoria[cat] = [];
         porCategoria[cat].push(item);
     });
