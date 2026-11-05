@@ -52,32 +52,50 @@ let productosCache = {};
 let imagenExistenteUrl = "";
 let categoriasColapsadas = {};
 let archivosParaSubir = [];
+let listaCategoriasRegistradas = []; 
+let listaProductosSnapshot = [];
 
-// Vincular correctamente los botones a sus respectivos inputs ocultos
 btnFile.addEventListener("click", () => {
     folderInput.value = "";
+    fileInput.value = "";
     fileInput.click();
 });
 
 btnFolder.addEventListener("click", () => {
     fileInput.value = "";
-    folderInput.click(); // ¡Aquí estaba el error anterior que ya quedó corregido!
+    folderInput.value = "";
+    folderInput.click();
 });
 
-function procesarArchivos(input) {
+function procesarArchivos(e) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    archivosParaSubir = Array.from(files).filter(f => f.type.startsWith("image/"));
+    actualizarVistaPrevia();
+}
+
+fileInput.addEventListener("change", procesarArchivos);
+folderInput.addEventListener("change", procesarArchivos);
+
+function actualizarVistaPrevia() {
     previewGallery.innerHTML = "";
-    archivosParaSubir = Array.from(input.files).filter(f => f.type.startsWith("image/"));
     
     if (archivosParaSubir.length > 0) {
-        txtFileName.textContent = `${archivosParaSubir.length} imagen(es) seleccionada(s)`;
+        txtFileName.textContent = `${archivosParaSubir.length} imagen(es) lista(s) para publicar`;
         
-        archivosParaSubir.forEach(file => {
+        archivosParaSubir.forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const img = document.createElement("img");
-                img.src = e.target.result;
-                img.className = "preview-thumb";
-                previewGallery.appendChild(img);
+                const container = document.createElement("div");
+                container.className = "preview-container";
+                
+                container.innerHTML = `
+                    <img src="${e.target.result}" class="preview-thumb">
+                    <button type="button" class="btn-remove-thumb" data-index="${index}" title="Quitar imagen">✕</button>
+                `;
+                
+                previewGallery.appendChild(container);
             };
             reader.readAsDataURL(file);
         });
@@ -86,8 +104,13 @@ function procesarArchivos(input) {
     }
 }
 
-fileInput.addEventListener("change", () => procesarArchivos(fileInput));
-folderInput.addEventListener("change", () => procesarArchivos(folderInput));
+previewGallery.addEventListener("click", (e) => {
+    if (e.target.classList.contains("btn-remove-thumb")) {
+        const index = Number(e.target.dataset.index);
+        archivosParaSubir.splice(index, 1);
+        actualizarVistaPrevia();
+    }
+});
 
 btnToggleAdmCat.addEventListener("click", () => {
     boxAdmCategorias.style.display = boxAdmCategorias.style.display === "none" || boxAdmCategorias.style.display === "" ? "block" : "none";
@@ -97,29 +120,33 @@ btnToggleAdmCat.addEventListener("click", () => {
 onSnapshot(collection(db, "categories"), (snapshot) => {
     selectCategoria.innerHTML = '<option value="">Selecciona una categoría...</option>';
     listaAdminCats.innerHTML = "";
-    if (snapshot.empty) {
-        listaAdminCats.innerHTML = `<p style="font-size:0.8rem; color:#a3a3a3; margin:0;">No hay categorías registradas.</p>`;
-        return;
+    listaCategoriasRegistradas = [];
+
+    if (!snapshot.empty) {
+        snapshot.forEach((docSnap) => {
+            const catData = docSnap.data();
+            const catId = docSnap.id;
+            const nombre = catData.nombre || "";
+            const valor = nombre.trim();
+
+            listaCategoriasRegistradas.push(valor.toUpperCase());
+
+            const opt = document.createElement("option");
+            opt.value = valor;
+            opt.textContent = nombre;
+            selectCategoria.appendChild(opt);
+
+            const row = document.createElement("div");
+            row.className = "category-row-item";
+            row.innerHTML = `
+                <span>${nombre}</span>
+                <button class="btn-del-cat-row" data-id="${catId}" title="Eliminar categoría" type="button">✕</button>
+            `;
+            listaAdminCats.appendChild(row);
+        });
     }
-    snapshot.forEach((docSnap) => {
-        const catData = docSnap.data();
-        const catId = docSnap.id;
-        const nombre = catData.nombre || "";
-        const valor = nombre.trim().toLowerCase();
 
-        const opt = document.createElement("option");
-        opt.value = valor;
-        opt.textContent = nombre;
-        selectCategoria.appendChild(opt);
-
-        const row = document.createElement("div");
-        row.className = "category-row-item";
-        row.innerHTML = `
-            <span>${nombre}</span>
-            <button class="btn-del-cat-row" data-id="${catId}" title="Eliminar categoría" type="button">✕</button>
-        `;
-        listaAdminCats.appendChild(row);
-    });
+    renderizarInventarioAgrupado();
 });
 
 btnAnadirCat.addEventListener("click", async () => {
@@ -169,14 +196,13 @@ window.prepararEdicion = (id) => {
 
     previewGallery.innerHTML = "";
     if (imagenExistenteUrl) {
-        const img = document.createElement("img");
-        img.src = imagenExistenteUrl;
-        img.className = "preview-thumb";
-        previewGallery.appendChild(img);
+        const container = document.createElement("div");
+        container.className = "preview-container";
+        container.innerHTML = `<img src="${imagenExistenteUrl}" class="preview-thumb">`;
+        previewGallery.appendChild(container);
     }
 
     txtFileName.textContent = "Modificando producto individual existente.";
-
     kickerForm.textContent = "MODIFICAR PRODUCTO";
     tituloForm.textContent = "Editar artículo";
     subtituloForm.textContent = `Actualizando los detalles del producto ID: ${id}`;
@@ -212,7 +238,7 @@ form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     if (!editandoId && archivosParaSubir.length === 0) {
-        alert("Por favor selecciona al menos una foto o carpeta.");
+        alert("Por favor selecciona al menos una foto o una carpeta antes de publicar.");
         return;
     }
 
@@ -222,7 +248,7 @@ form.addEventListener("submit", async (e) => {
     try {
         const nombreBase = document.getElementById("j_nombre").value.trim();
         const precio = Number(document.getElementById("j_precio").value);
-        const categoria = selectCategoria.value;
+        const categoriaSeleccionada = selectCategoria.value; 
         const descripcion = document.getElementById("j_descripcion").value.trim();
 
         if (editandoId) {
@@ -248,7 +274,7 @@ form.addEventListener("submit", async (e) => {
                 
                 const dataDrive = await res.json();
                 if (dataDrive.status !== "success") {
-                    throw new Error(dataDrive.message || "Error al subir la imagen.");
+                    throw new Error(dataDrive.message || "Error al subir la imagen a Drive.");
                 }
                 urlFinal = dataDrive.url;
             }
@@ -257,7 +283,7 @@ form.addEventListener("submit", async (e) => {
             await updateDoc(doc(db, "jewelry", editandoId), {
                 nombre: nombreBase,
                 precio: precio,
-                categoria: categoria,
+                categoria: categoriaSeleccionada,
                 descripcion: descripcion,
                 imagenUrl: urlFinal,
                 actualizado: Date.now()
@@ -270,7 +296,7 @@ form.addEventListener("submit", async (e) => {
 
             for (let i = 0; i < archivosParaSubir.length; i++) {
                 const file = archivosParaSubir[i];
-                mensajeEstado.textContent = `Procesando imagen ${i + 1} de ${archivosParaSubir.length}...`;
+                mensajeEstado.textContent = `Subiendo imagen ${i + 1} de ${archivosParaSubir.length} a Google Drive...`;
 
                 const base64 = await new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -296,7 +322,7 @@ form.addEventListener("submit", async (e) => {
                 await addDoc(collection(db, "jewelry"), {
                     nombre: nombreBase,
                     precio: precio,
-                    categoria: categoria,
+                    categoria: categoriaSeleccionada,
                     descripcion: descripcion,
                     imagenUrl: dataDrive.url,
                     creado: Date.now() + i
@@ -320,15 +346,12 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
-// --- FUNCIÓN GLOBAL PARA COLAPSAR / EXPANDIR CATEGORÍAS ---
+// --- LISTAR Y GESTIONAR INVENTARIO AGRUPADO ---
 window.toggleCategoriaColapsar = (catNombre) => {
     categoriasColapsadas[catNombre] = !categoriasColapsadas[catNombre];
     renderizarInventarioAgrupado();
 };
 
-let listaProductosSnapshot = [];
-
-// --- LISTAR Y GESTIONAR INVENTARIO AGRUPADO POR CATEGORÍA CON FLECHAS ---
 const q = query(collection(db, "jewelry"), orderBy("creado", "desc"));
 onSnapshot(q, (snapshot) => {
     listaProductosSnapshot = [];
@@ -347,18 +370,28 @@ onSnapshot(q, (snapshot) => {
 function renderizarInventarioAgrupado() {
     listaInventario.innerHTML = "";
 
-    if (listaProductosSnapshot.length === 0) {
-        listaInventario.innerHTML = "<p style='color:#a3a3a3; grid-column: 1 / -1;'>No hay productos registrados aún.</p>";
-        return;
-    }
-
     let porCategoria = {};
+
+    // 1. Agregar las categorías oficiales registradas en Firebase
+    listaCategoriasRegistradas.forEach(cat => {
+        porCategoria[cat] = [];
+    });
+
+    // 2. Agrupar todos los productos y detectar automáticamente categorías de productos existentes
     listaProductosSnapshot.forEach(item => {
-        const cat = item.categoria ? item.categoria.toUpperCase() : "SIN CATEGORÍA";
-        if (!porCategoria[cat]) porCategoria[cat] = [];
+        let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
+        if (!porCategoria[cat]) {
+            porCategoria[cat] = [];
+        }
         porCategoria[cat].push(item);
     });
 
+    if (Object.keys(porCategoria).length === 0) {
+        listaInventario.innerHTML = "<p style='color:#a3a3a3; grid-column: 1 / -1;'>No hay categorías ni productos registrados aún.</p>";
+        return;
+    }
+
+    // 3. Renderizar todas las carpetas en pantalla
     for (const [cat, productos] of Object.entries(porCategoria)) {
         const estaColapsada = !!categoriasColapsadas[cat];
         const flecha = estaColapsada ? "▶" : "▼";
@@ -380,23 +413,28 @@ function renderizarInventarioAgrupado() {
 
         const gridProductos = seccionCat.querySelector(`#grid-cat-${cat}`);
 
-        productos.forEach(item => {
-            const card = document.createElement("div");
-            card.className = "product-item";
-            card.innerHTML = `
-                <div>
-                    <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
-                    <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
-                    <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
-                    <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
-                </div>
-                <div class="product-actions">
-                    <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
-                    <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
-                </div>
-            `;
-            gridProductos.appendChild(card);
-        });
+        if (productos.length === 0) {
+            gridProductos.style.display = "block";
+            gridProductos.innerHTML = `<p style="color: #737373; font-size: 0.85rem; margin: 0;">No hay productos en esta categoría.</p>`;
+        } else {
+            productos.forEach(item => {
+                const card = document.createElement("div");
+                card.className = "product-item";
+                card.innerHTML = `
+                    <div>
+                        <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
+                        <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
+                        <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
+                        <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
+                    </div>
+                    <div class="product-actions">
+                        <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
+                        <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
+                    </div>
+                `;
+                gridProductos.appendChild(card);
+            });
+        }
 
         listaInventario.appendChild(seccionCat);
     }
