@@ -372,18 +372,25 @@ function renderizarInventarioAgrupado() {
 
     let porCategoria = {};
 
-    // 1. Agregar las categorías oficiales registradas en Firebase
+    // 1. Agregar categorías oficiales
     listaCategoriasRegistradas.forEach(cat => {
         porCategoria[cat] = [];
     });
 
-    // 2. Agrupar todos los productos y detectar automáticamente categorías de productos existentes
+    // 2. Detectar y registrar automáticamente categorías de productos existentes
     listaProductosSnapshot.forEach(item => {
         let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
         if (!porCategoria[cat]) {
             porCategoria[cat] = [];
         }
-        porCategoria[cat].push(item);
+    });
+
+    // 3. Organizar los productos dentro de su respectiva categoría
+    listaProductosSnapshot.forEach(item => {
+        let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
+        if (porCategoria[cat]) {
+            porCategoria[cat].push(item);
+        }
     });
 
     if (Object.keys(porCategoria).length === 0) {
@@ -391,7 +398,7 @@ function renderizarInventarioAgrupado() {
         return;
     }
 
-    // 3. Renderizar todas las carpetas en pantalla
+    // 4. Renderizar carpetas y productos
     for (const [cat, productos] of Object.entries(porCategoria)) {
         const estaColapsada = !!categoriasColapsadas[cat];
         const flecha = estaColapsada ? "▶" : "▼";
