@@ -372,12 +372,12 @@ function renderizarInventarioAgrupado() {
 
     let porCategoria = {};
 
-    // 1. Agregar categorías oficiales del panel de administración
+    // 1. Agregar categorías oficiales
     listaCategoriasRegistradas.forEach(cat => {
         porCategoria[cat] = [];
     });
 
-    // 2. ESCANEO AUTOMÁTICO: Detecta cualquier categoría que tengan los productos guardados en Firebase y crea su carpeta al instante
+    // 2. Detectar automáticamente categorías de productos existentes
     listaProductosSnapshot.forEach(item => {
         let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
         if (!porCategoria[cat]) {
@@ -385,7 +385,7 @@ function renderizarInventarioAgrupado() {
         }
     });
 
-    // 3. Organizar cada producto dentro de su respectiva categoría
+    // 3. Organizar los productos dentro de su categoría
     listaProductosSnapshot.forEach(item => {
         let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
         if (porCategoria[cat]) {
@@ -398,11 +398,14 @@ function renderizarInventarioAgrupado() {
         return;
     }
 
-    // 4. Renderizar todas las carpetas en pantalla
+    // 4. Renderizar carpetas y productos con IDs limpios y seguros
     for (const [cat, productos] of Object.entries(porCategoria)) {
         const estaColapsada = !!categoriasColapsadas[cat];
         const flecha = estaColapsada ? "▶" : "▼";
         const estiloDisplay = estaColapsada ? "display: none;" : "display: grid;";
+        
+        // Creamos un ID seguro para evitar errores con espacios o símbolos (ej. "EAR CUFF" -> "EAR_CUFF")
+        const safeCatId = cat.replace(/[^a-zA-Z0-9]/g, '_');
 
         const seccionCat = document.createElement("div");
         seccionCat.style.cssText = "grid-column: 1 / -1; background: #141414; border: 1px solid #262626; border-radius: 12px; padding: 16px; margin-bottom: 16px;";
@@ -414,11 +417,11 @@ function renderizarInventarioAgrupado() {
                     📁 ${cat} (${productos.length} productos)
                 </h3>
             </div>
-            <div id="grid-cat-${cat}" style="${estiloDisplay} grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 14px;">
+            <div id="grid-cat-${safeCatId}" style="${estiloDisplay} grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 14px;">
             </div>
         `;
 
-        const gridProductos = seccionCat.querySelector(`#grid-cat-${cat}`);
+        const gridProductos = seccionCat.querySelector(`#grid-cat-${safeCatId}`);
 
         if (productos.length === 0) {
             gridProductos.style.display = "block";
