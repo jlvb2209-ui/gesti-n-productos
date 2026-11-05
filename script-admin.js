@@ -372,12 +372,12 @@ function renderizarInventarioAgrupado() {
 
     let porCategoria = {};
 
-    // 1. Agregar categorías oficiales
+    // 1. Agregar categorías oficiales del panel de administración
     listaCategoriasRegistradas.forEach(cat => {
         porCategoria[cat] = [];
     });
 
-    // 2. Detectar y registrar automáticamente categorías de productos existentes
+    // 2. ESCANEO AUTOMÁTICO: Detecta cualquier categoría que tengan los productos guardados en Firebase y crea su carpeta al instante
     listaProductosSnapshot.forEach(item => {
         let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
         if (!porCategoria[cat]) {
@@ -385,7 +385,7 @@ function renderizarInventarioAgrupado() {
         }
     });
 
-    // 3. Organizar los productos dentro de su respectiva categoría
+    // 3. Organizar cada producto dentro de su respectiva categoría
     listaProductosSnapshot.forEach(item => {
         let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
         if (porCategoria[cat]) {
@@ -398,7 +398,7 @@ function renderizarInventarioAgrupado() {
         return;
     }
 
-    // 4. Renderizar carpetas y productos
+    // 4. Renderizar todas las carpetas en pantalla
     for (const [cat, productos] of Object.entries(porCategoria)) {
         const estaColapsada = !!categoriasColapsadas[cat];
         const flecha = estaColapsada ? "▶" : "▼";
