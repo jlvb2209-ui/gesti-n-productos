@@ -368,6 +368,7 @@ onSnapshot(q, (snapshot) => {
 });
 
 function renderizarInventarioAgrupado() {
+    if (!listaInventario) return;
     listaInventario.innerHTML = "";
 
     let porCategoria = {};
@@ -423,27 +424,29 @@ function renderizarInventarioAgrupado() {
 
         const gridProductos = seccionCat.querySelector(`#grid-cat-${safeCatId}`);
 
-        if (productos.length === 0) {
-            gridProductos.style.display = "block";
-            gridProductos.innerHTML = `<p style="color: #737373; font-size: 0.85rem; margin: 0;">No hay productos en esta categoría.</p>`;
-        } else {
-            productos.forEach(item => {
-                const card = document.createElement("div");
-                card.className = "product-item";
-                card.innerHTML = `
-                    <div>
-                        <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
-                        <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
-                        <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
-                        <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
-                    </div>
-                    <div class="product-actions">
-                        <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
-                        <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
-                    </div>
-                `;
-                gridProductos.appendChild(card);
-            });
+        if (gridProductos) {
+            if (productos.length === 0) {
+                gridProductos.style.display = "block";
+                gridProductos.innerHTML = `<p style="color: #737373; font-size: 0.85rem; margin: 0;">No hay productos en esta categoría.</p>`;
+            } else {
+                productos.forEach(item => {
+                    const card = document.createElement("div");
+                    card.className = "product-item";
+                    card.innerHTML = `
+                        <div>
+                            <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
+                            <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
+                            <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
+                            <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
+                        </div>
+                        <div class="product-actions">
+                            <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
+                            <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
+                        </div>
+                    `;
+                    gridProductos.appendChild(card);
+                });
+            }
         }
 
         listaInventario.appendChild(seccionCat);
