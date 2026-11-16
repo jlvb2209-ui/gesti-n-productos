@@ -211,6 +211,18 @@ window.prepararEdicion = (id) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
+// --- CAMBIAR VISIBILIDAD (OCULTAR / MOSTRAR) ---
+window.toggleVisibilidad = async (id, estadoActual) => {
+    try {
+        const nuevoEstado = estadoActual === false ? true : false;
+        await updateDoc(doc(db, "jewelry", id), {
+            activo: nuevoEstado
+        });
+    } catch (err) {
+        alert("Error al cambiar la visibilidad: " + err.message);
+    }
+};
+
 btnCancelar.addEventListener("click", () => {
     resetearFormulario();
 });
@@ -321,6 +333,7 @@ form.addEventListener("submit", async (e) => {
                     precio: precio,
                     categoria: categoriaSeleccionada,
                     imagenUrl: dataDrive.url,
+                    activo: true, // Por defecto se publica visible
                     creado: Date.now() + i
                 });
 
@@ -328,7 +341,7 @@ form.addEventListener("submit", async (e) => {
             }
 
             mensajeEstado.style.color = "#16a34a";
-            mensajeEstado.textContent = `¡Se publicaron ${creados} producto(s) de forma individual con éxito!`;
+            mensajeEstado.textContent = `¡Se publicaron ${creados} producto(s) con éxito!`;
         }
 
         resetearFormulario();
@@ -420,16 +433,25 @@ function renderizarInventarioAgrupado() {
                 gridProductos.innerHTML = `<p style="color: #737373; font-size: 0.85rem; margin: 0;">No hay productos en esta categoría.</p>`;
             } else {
                 productos.forEach(item => {
+                    const esActivo = item.activo !== false; // Si es true o undefined, se considera activo
+                    const textoEstado = esActivo ? "👁️ Visible" : "🚫 Oculto";
+                    const colorEstado = esActivo ? "background: #065f46; color: #6ee7b7;" : "background: #7f1d1d; color: #fca5a5;";
+
                     const card = document.createElement("div");
                     card.className = "product-item";
                     card.innerHTML = `
                         <div>
-                            <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy">
+                            <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy" style="${!esActivo ? 'opacity: 0.4;' : ''}">
                             <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
                             <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
-                            <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                                <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
+                                <button onclick="toggleVisibilidad('${item.id}', ${esActivo})" style="${colorEstado} border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; cursor: pointer;" type="button">
+                                    ${textoEstado}
+                                </button>
+                            </div>
                         </div>
-                        <div class="product-actions">
+                        <div class="product-actions" style="margin-top: 10px;">
                             <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
                             <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
                         </div>
