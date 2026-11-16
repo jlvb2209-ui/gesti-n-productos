@@ -42,6 +42,7 @@ const boxAdmCategorias = document.getElementById("boxAdmCategorias");
 const inputNuevaCat = document.getElementById("nuevaCategoriaInput");
 const btnAnadirCat = document.getElementById("btnAnadirCategoria");
 const listaAdminCats = document.getElementById("listaAdminCategorias");
+const filtroEstadoGroup = document.getElementById("filtroEstadoGroup");
 
 const kickerForm = document.getElementById("kickerForm");
 const tituloForm = document.getElementById("tituloForm");
@@ -54,6 +55,19 @@ let categoriasColapsadas = {};
 let archivosParaSubir = [];
 let listaCategoriasRegistradas = []; 
 let listaProductosSnapshot = [];
+let filtroEstadoActual = "todos"; // "todos", "activos", "ocultos"
+
+// --- FILTRO DE ESTADO (ACTIVOS / OCULTOS / TODOS) ---
+if (filtroEstadoGroup) {
+    filtroEstadoGroup.addEventListener("click", (e) => {
+        if (e.target.classList.contains("btn-filter-status")) {
+            filtroEstadoGroup.querySelectorAll(".btn-filter-status").forEach(btn => btn.classList.remove("active"));
+            e.target.classList.add("active");
+            filtroEstadoActual = e.target.dataset.estado;
+            renderizarInventarioAgrupado();
+        }
+    });
+}
 
 btnFile.addEventListener("click", () => {
     folderInput.value = "";
@@ -333,7 +347,7 @@ form.addEventListener("submit", async (e) => {
                     precio: precio,
                     categoria: categoriaSeleccionada,
                     imagenUrl: dataDrive.url,
-                    activo: true, // Por defecto se publica visible
+                    activo: true,
                     creado: Date.now() + i
                 });
 
@@ -380,28 +394,39 @@ function renderizarInventarioAgrupado() {
     if (!listaInventario) return;
     listaInventario.innerHTML = "";
 
-    let porCategoria = {};
-
-    listaCategoriasRegistradas.forEach(cat => {
-        porCategoria[cat] = [];
+    // Filtrar productos según el botón seleccionado (Activos, Ocultos o Todos)
+    const productosFiltrados = listaProductosSnapshot.filter(item => {
+        const esActivo = item.activo !== false;
+        if (filtroEstadoActual === "activos") return esActivo;
+        if (filtroEstadoActual === "ocultos") return !esActivo;
+        return true; // "todos"
     });
 
-    listaProductosSnapshot.forEach(item => {
+    let porCategoria = {};
+
+    // Si estamos viendo "Todos", mostramos todas las categorías registradas aunque estén vacías
+    if (filtroEstadoActual === "todos") {
+        listaCategoriasRegistradas.forEach(cat => {
+            porCategoria[cat] = [];
+        });
+    }
+
+    // Crear las agrupaciones basadas en los productos filtrados
+    productosFiltrados.forEach(item => {
         let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
         if (!porCategoria[cat]) {
             porCategoria[cat] = [];
         }
-    });
-
-    listaProductosSnapshot.forEach(item => {
-        let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
-        if (porCategoria[cat]) {
-            porCategoria[cat].push(item);
-        }
+        porCategoria[cat].push(item);
     });
 
     if (Object.keys(porCategoria).length === 0) {
-        listaInventario.innerHTML = "<p style='color:#a3a3a3; grid-column: 1 / -1;'>No hay categorías ni productos registrados aún.</p>";
+        const textoVacio = filtroEstadoActual === "ocultos" 
+            ? "No tienes ningún producto oculto actualmente." 
+            : filtroEstadoActual === "activos" 
+            ? "No tienes productos activos publicados." 
+            : "No hay categorías ni productos registrados aún.";
+        listaInventario.innerHTML = `<p style='color:#a3a3a3; grid-column: 1 / -1;'>${textoVacio}</p>`;
         return;
     }
 
@@ -433,7 +458,7 @@ function renderizarInventarioAgrupado() {
                 gridProductos.innerHTML = `<p style="color: #737373; font-size: 0.85rem; margin: 0;">No hay productos en esta categoría.</p>`;
             } else {
                 productos.forEach(item => {
-                    const esActivo = item.activo !== false; // Si es true o undefined, se considera activo
+                    const esActivo = item.activo !== false;
                     const textoEstado = esActivo ? "👁️ Visible" : "🚫 Oculto";
                     const colorEstado = esActivo ? "background: #065f46; color: #6ee7b7;" : "background: #7f1d1d; color: #fca5a5;";
 
