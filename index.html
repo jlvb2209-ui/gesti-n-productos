@@ -24,6 +24,7 @@
             color: var(--text-dark);
             margin: 0;
             padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
         }
         .topbar {
             background-color: var(--bg-header);
@@ -232,12 +233,33 @@
             flex-wrap: wrap;
             margin-bottom: 20px;
         }
+        .preview-container {
+            position: relative;
+            display: inline-block;
+        }
         .preview-thumb {
             width: 80px;
             height: 80px;
             object-fit: cover;
             border-radius: 6px;
             border: 1px solid var(--gold);
+        }
+        .btn-remove-thumb {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #dc2626;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
         }
         .form-actions {
             display: flex;
@@ -273,21 +295,47 @@
             color: #fff;
             border-color: #fff;
         }
-        .product-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
+
+        /* Estilos de cabecera de Productos Publicados + Botones de Filtro */
+        .inventory-header-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
             gap: 16px;
+            margin-bottom: 16px;
         }
-        @media (min-width: 768px) {
-            .product-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
+        .inventory-header-bar h2 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin: 0;
+            color: var(--gold);
         }
-        @media (min-width: 1024px) {
-            .product-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
+        .filter-tabs-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
+        .btn-filter-status {
+            background: var(--card-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-filter-status:hover {
+            border-color: var(--gold);
+            color: #ffffff;
+        }
+        .btn-filter-status.active {
+            background: var(--gold);
+            color: #000000;
+            border-color: var(--gold);
+        }
+
         .product-item {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -378,7 +426,7 @@
                         </select>
                     </div>
                 </div>
-
+                
                 <!-- Panel desplegable de categorías -->
                 <div id="boxAdmCategorias" class="category-admin-box" style="display: none;">
                     <h3 style="margin: 0 0 4px 0; font-size: 0.95rem; color: var(--gold);">Administrar Categorías Principales</h3>
@@ -394,19 +442,16 @@
                     <label>Fotografía(s) del Producto</label> 
                 </div>
 
-                <!-- DOS BOTONES INDEPENDIENTES Y CORREGIDOS -->
                 <div class="file-drop-area">
                     <button type="button" class="btn-file" id="btnSeleccionarFoto">📷 Seleccionar Foto(s)...</button>
                     <button type="button" class="btn-file" id="btnSeleccionarCarpeta">📁 Seleccionar Carpeta...</button>
                     
-                    <!-- Inputs ocultos separados -->
                     <input type="file" id="j_foto" accept="image/*" multiple style="display:none;">
                     <input type="file" id="j_carpeta" accept="image/*" multiple webkitdirectory style="display:none;">
                     
                     <span class="file-name" id="textoNombreArchivo">No se ha seleccionado ningún archivo.</span>
                 </div>
 
-                <!-- Previsualización de imágenes seleccionadas -->
                 <div id="previewGallery" class="preview-gallery"></div>
 
                 <div class="form-actions">
@@ -421,12 +466,20 @@
             </form>
         </div>
 
-        <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 12px; color:#d4af37;">Productos Publicados</h2>
+        <!-- BARRA CON TÍTULO Y BOTONES DE FILTRO (ACTIVOS / OCULTOS / TODOS) -->
+        <div class="inventory-header-bar">
+            <h2>Productos Publicados</h2>
+            <div class="filter-tabs-group" id="filtroEstadoGroup">
+                <button type="button" class="btn-filter-status active" data-estado="todos">Todos</button>
+                <button type="button" class="btn-filter-status" data-estado="activos">Activos</button>
+                <button type="button" class="btn-filter-status" data-estado="ocultos">Ocultos</button>
+            </div>
+        </div>
+
         <div id="listaInventarioAdmin" style="padding-bottom: 40px;">
             <!-- Se cargan automáticamente agrupados por categoría con flechas -->
         </div>
     </div>
-
     <script type="module" src="script-admin.js"></script>
 </body>
 </html>
