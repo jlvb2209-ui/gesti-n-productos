@@ -190,10 +190,6 @@ window.prepararEdicion = (id) => {
     document.getElementById("j_precio").value = prod.precio || "";
     selectCategoria.value = prod.categoria || "";
     
-    // Verificamos de forma segura por si el input ya no existe en el HTML
-    const campoDesc = document.getElementById("j_descripcion");
-    if (campoDesc) campoDesc.value = prod.descripcion || "";
-    
     imagenExistenteUrl = prod.imagenUrl || "";
     archivosParaSubir = [];
 
@@ -252,10 +248,6 @@ form.addEventListener("submit", async (e) => {
         const nombreBase = document.getElementById("j_nombre").value.trim();
         const precio = Number(document.getElementById("j_precio").value);
         const categoriaSeleccionada = selectCategoria.value; 
-        
-        // Manejo seguro de la descripción (si el campo ya no está en el HTML, asigna texto vacío)
-        const campoDesc = document.getElementById("j_descripcion");
-        const descripcion = campoDesc ? campoDesc.value.trim() : "";
 
         if (editandoId) {
             let urlFinal = imagenExistenteUrl;
@@ -290,7 +282,6 @@ form.addEventListener("submit", async (e) => {
                 nombre: nombreBase,
                 precio: precio,
                 categoria: categoriaSeleccionada,
-                descripcion: descripcion,
                 imagenUrl: urlFinal,
                 actualizado: Date.now()
             });
@@ -329,7 +320,6 @@ form.addEventListener("submit", async (e) => {
                     nombre: nombreBase,
                     precio: precio,
                     categoria: categoriaSeleccionada,
-                    descripcion: descripcion,
                     imagenUrl: dataDrive.url,
                     creado: Date.now() + i
                 });
@@ -379,12 +369,10 @@ function renderizarInventarioAgrupado() {
 
     let porCategoria = {};
 
-    // 1. Agregar categorías oficiales
     listaCategoriasRegistradas.forEach(cat => {
         porCategoria[cat] = [];
     });
 
-    // 2. Detectar automáticamente categorías de productos existentes
     listaProductosSnapshot.forEach(item => {
         let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
         if (!porCategoria[cat]) {
@@ -392,7 +380,6 @@ function renderizarInventarioAgrupado() {
         }
     });
 
-    // 3. Organizar los productos dentro de su categoría
     listaProductosSnapshot.forEach(item => {
         let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
         if (porCategoria[cat]) {
@@ -405,13 +392,10 @@ function renderizarInventarioAgrupado() {
         return;
     }
 
-    // 4. Renderizar carpetas y productos con IDs limpios y seguros
     for (const [cat, productos] of Object.entries(porCategoria)) {
         const estaColapsada = !!categoriasColapsadas[cat];
         const flecha = estaColapsada ? "▶" : "▼";
         const estiloDisplay = estaColapsada ? "display: none;" : "display: grid;";
-        
-        // Creamos un ID seguro para evitar errores con espacios o símbolos (ej. "EAR CUFF" -> "EAR_CUFF")
         const safeCatId = cat.replace(/[^a-zA-Z0-9]/g, '_');
 
         const seccionCat = document.createElement("div");
