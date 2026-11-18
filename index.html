@@ -295,8 +295,6 @@
             color: #fff;
             border-color: #fff;
         }
-
-        /* Estilos de cabecera de Productos Publicados + Botones de Filtro */
         .inventory-header-bar {
             display: flex;
             flex-wrap: wrap;
@@ -335,7 +333,6 @@
             color: #000000;
             border-color: var(--gold);
         }
-
         .product-item {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -397,6 +394,25 @@
     </div>
     
     <div class="w" style="max-width: 1200px; margin: 0 auto; padding: 0 16px;">
+        
+        <!-- PANEL DE CONFIGURACIÓN DE TEMÁTICA -->
+        <div class="card-panel">
+            <div class="card-header-flex">
+                <div class="card-title">
+                    <span style="color:#d4af37; font-size:0.72rem; font-weight:800; text-transform:uppercase;">Diseño de la Tienda</span>
+                    <h2>Temática de la Temporada</h2>
+                    <p>Selecciona la época activa para cambiar el diseño y los adornos en la página de tus clientes.</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;" id="grupoSelectorTematica">
+                <button type="button" class="btn-filter-status active" data-tematica="normal">✨ Normal / Estándar</button>
+                <button type="button" class="btn-filter-status" data-tematica="navidad">🎄 Navidad</button>
+                <button type="button" class="btn-filter-status" data-tematica="independencia">🇨🇷 15 de Setiembre</button>
+                <button type="button" class="btn-filter-status" data-tematica="san-valentin">💖 San Valentín</button>
+            </div>
+            <p id="estadoTematicaMsg" style="font-size: 0.85rem; margin-top: 10px; font-weight: 600;"></p>
+        </div>
+
         <div class="card-panel">
             <div class="card-header-flex">
                 <div class="card-title">
@@ -427,7 +443,6 @@
                     </div>
                 </div>
                 
-                <!-- Panel desplegable de categorías -->
                 <div id="boxAdmCategorias" class="category-admin-box" style="display: none;">
                     <h3 style="margin: 0 0 4px 0; font-size: 0.95rem; color: var(--gold);">Administrar Categorías Principales</h3>
                     <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: var(--text-muted);">Añade una categoría nueva o elimina las existentes.</p>
@@ -437,11 +452,9 @@
                     </div>
                     <div class="category-list-container" id="listaAdminCategorias"></div>
                 </div>
-
                 <div class="field-group" style="margin-bottom: 6px;">
                     <label>Fotografía(s) del Producto</label> 
                 </div>
-
                 <div class="file-drop-area">
                     <button type="button" class="btn-file" id="btnSeleccionarFoto">📷 Seleccionar Foto(s)...</button>
                     <button type="button" class="btn-file" id="btnSeleccionarCarpeta">📁 Seleccionar Carpeta...</button>
@@ -451,9 +464,7 @@
                     
                     <span class="file-name" id="textoNombreArchivo">No se ha seleccionado ningún archivo.</span>
                 </div>
-
                 <div id="previewGallery" class="preview-gallery"></div>
-
                 <div class="form-actions">
                     <button type="submit" class="btn-submit" id="btnGuardar">
                         Subir a Google Drive y Publicar
@@ -466,7 +477,6 @@
             </form>
         </div>
 
-        <!-- BARRA CON TÍTULO Y BOTONES DE FILTRO (ACTIVOS / OCULTOS / TODOS) -->
         <div class="inventory-header-bar">
             <h2>Productos Publicados</h2>
             <div class="filter-tabs-group" id="filtroEstadoGroup">
@@ -475,11 +485,501 @@
                 <button type="button" class="btn-filter-status" data-estado="ocultos">Ocultos</button>
             </div>
         </div>
-
-        <div id="listaInventarioAdmin" style="padding-bottom: 40px;">
-            <!-- Se cargan automáticamente agrupados por categoría con flechas -->
-        </div>
+        <div id="listaInventarioAdmin" style="padding-bottom: 40px;"></div>
     </div>
-    <script type="module" src="script-admin.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import {
+            initializeFirestore,
+            collection,
+            addDoc,
+            updateDoc,
+            deleteDoc,
+            doc,
+            getDoc,
+            setDoc,
+            onSnapshot,
+            query,
+            orderBy
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5BXWwtk7LsDCXmjYhz5LOIv5tz6U1N_A",
+            authDomain: "gracia-accesorios.firebaseapp.com",
+            projectId: "gracia-accesorios",
+            storageBucket: "gracia-accesorios.firebasestorage.app",
+            messagingSenderId: "843057510032",
+            appId: "1:843057510032:web:148405f256ffd62b5a8a15"
+        };
+
+        const URL_GOOGLE_DRIVE = "https://script.google.com/macros/s/AKfycbzNPWF6F7-ML2lMG597jR_3NO56Gs7gTt05K09-9HpS-xXqdjK8mT0JmUP3zc9bWbme/exec";
+        const app = initializeApp(firebaseConfig);
+        const db = initializeFirestore(app, { experimentalForceLongPolling: true });
+
+        // --- GESTIÓN DE TEMÁTICA EN FIREBASE ---
+        const grupoSelectorTematica = document.getElementById("grupoSelectorTematica");
+        const estadoTematicaMsg = document.getElementById("estadoTematicaMsg");
+
+        async function cargarTematicaActual() {
+            try {
+                const docSnap = await getDoc(doc(db, "configuracion", "tematica"));
+                let tematicaActual = "normal";
+                if (docSnap.exists()) {
+                    tematicaActual = docSnap.data().tematica || "normal";
+                }
+                grupoSelectorTematica.querySelectorAll("button").forEach(btn => {
+                    if (btn.dataset.tematica === tematicaActual) {
+                        btn.classList.add("active");
+                    } else {
+                        btn.classList.remove("active");
+                    }
+                });
+            } catch (err) {
+                console.error("Error al cargar temática:", err);
+            }
+        }
+        cargarTematicaActual();
+
+        grupoSelectorTematica.addEventListener("click", async (e) => {
+            if (e.target.tagName === "BUTTON") {
+                const nuevaTematica = e.target.dataset.tematica;
+                grupoSelectorTematica.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+                e.target.classList.add("active");
+                
+                try {
+                    await setDoc(doc(db, "configuracion", "tematica"), {
+                        tematica: nuevaTematica,
+                        actualizado: Date.now()
+                    });
+                    estadoTematicaMsg.style.color = "#16a34a";
+                    estadoTematicaMsg.textContent = "¡Temática actualizada con éxito en la tienda!";
+                    setTimeout(() => { estadoTematicaMsg.textContent = ""; }, 3000);
+                } catch (err) {
+                    alert("Error al guardar la temática: " + err.message);
+                }
+            }
+        });
+
+        const form = document.getElementById("formPublicarJoya");
+        const fileInput = document.getElementById("j_foto");
+        const folderInput = document.getElementById("j_carpeta");
+        const btnFile = document.getElementById("btnSeleccionarFoto");
+        const btnFolder = document.getElementById("btnSeleccionarCarpeta");
+        const txtFileName = document.getElementById("textoNombreArchivo");
+        const previewGallery = document.getElementById("previewGallery");
+        const btnSubmit = document.getElementById("btnGuardar");
+        const btnCancelar = document.getElementById("btnCancelar");
+        const mensajeEstado = document.getElementById("mensajeEstado");
+        const listaInventario = document.getElementById("listaInventarioAdmin");
+        const selectCategoria = document.getElementById("j_categoria");
+        const btnToggleAdmCat = document.getElementById("btnToggleAdmCat");
+        const boxAdmCategorias = document.getElementById("boxAdmCategorias");
+        const inputNuevaCat = document.getElementById("nuevaCategoriaInput");
+        const btnAnadirCat = document.getElementById("btnAnadirCategoria");
+        const listaAdminCats = document.getElementById("listaAdminCategorias");
+        const filtroEstadoGroup = document.getElementById("filtroEstadoGroup");
+        const kickerForm = document.getElementById("kickerForm");
+        const tituloForm = document.getElementById("tituloForm");
+        const subtituloForm = document.getElementById("subtituloForm");
+
+        let editandoId = null;
+        let productosCache = {};
+        let imagenExistenteUrl = "";
+        let categoriasColapsadas = {};
+        let archivosParaSubir = [];
+        let listaCategoriasRegistradas = []; 
+        let listaProductosSnapshot = [];
+        let filtroEstadoActual = "todos";
+
+        if (filtroEstadoGroup) {
+            filtroEstadoGroup.addEventListener("click", (e) => {
+                if (e.target.classList.contains("btn-filter-status")) {
+                    filtroEstadoGroup.querySelectorAll(".btn-filter-status").forEach(btn => btn.classList.remove("active"));
+                    e.target.classList.add("active");
+                    filtroEstadoActual = e.target.dataset.estado;
+                    renderizarInventarioAgrupado();
+                }
+            });
+        }
+
+        btnFile.addEventListener("click", () => {
+            folderInput.value = "";
+            fileInput.value = "";
+            fileInput.click();
+        });
+        btnFolder.addEventListener("click", () => {
+            fileInput.value = "";
+            folderInput.value = "";
+            folderInput.click();
+        });
+
+        function procesarArchivos(e) {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            archivosParaSubir = Array.from(files).filter(f => f.type.startsWith("image/"));
+            actualizarVistaPrevia();
+        }
+        fileInput.addEventListener("change", procesarArchivos);
+        folderInput.addEventListener("change", procesarArchivos);
+
+        function actualizarVistaPrevia() {
+            previewGallery.innerHTML = "";
+            if (archivosParaSubir.length > 0) {
+                txtFileName.textContent = `${archivosParaSubir.length} imagen(es) lista(s) para publicar`;
+                archivosParaSubir.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const container = document.createElement("div");
+                        container.className = "preview-container";
+                        container.innerHTML = `
+                            <img src="${e.target.result}" class="preview-thumb">
+                            <button type="button" class="btn-remove-thumb" data-index="${index}" title="Quitar imagen">✕</button>
+                        `;
+                        previewGallery.appendChild(container);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            } else {
+                txtFileName.textContent = "No se ha seleccionado ningún archivo.";
+            }
+        }
+
+        previewGallery.addEventListener("click", (e) => {
+            if (e.target.classList.contains("btn-remove-thumb")) {
+                const index = Number(e.target.dataset.index);
+                archivosParaSubir.splice(index, 1);
+                actualizarVistaPrevia();
+            }
+        });
+
+        btnToggleAdmCat.addEventListener("click", () => {
+            boxAdmCategorias.style.display = boxAdmCategorias.style.display === "none" || boxAdmCategorias.style.display === "" ? "block" : "none";
+        });
+
+        onSnapshot(collection(db, "categories"), (snapshot) => {
+            selectCategoria.innerHTML = '<option value="">Selecciona una categoría...</option>';
+            listaAdminCats.innerHTML = "";
+            listaCategoriasRegistradas = [];
+            if (!snapshot.empty) {
+                snapshot.forEach((docSnap) => {
+                    const catData = docSnap.data();
+                    const catId = docSnap.id;
+                    const nombre = catData.nombre || "";
+                    const valor = nombre.trim();
+                    listaCategoriasRegistradas.push(valor.toUpperCase());
+                    const opt = document.createElement("option");
+                    opt.value = valor;
+                    opt.textContent = nombre;
+                    selectCategoria.appendChild(opt);
+                    const row = document.createElement("div");
+                    row.className = "category-row-item";
+                    row.innerHTML = `
+                        <span>${nombre}</span>
+                        <button class="btn-del-cat-row" data-id="${catId}" title="Eliminar categoría" type="button">✕</button>
+                    `;
+                    listaAdminCats.appendChild(row);
+                });
+            }
+            renderizarInventarioAgrupado();
+        });
+
+        btnAnadirCat.addEventListener("click", async () => {
+            const nombreCat = inputNuevaCat.value.trim();
+            if (!nombreCat) {
+                alert("Por favor ingresa el nombre de la categoría.");
+                return;
+            }
+            try {
+                await addDoc(collection(db, "categories"), {
+                    nombre: nombreCat,
+                    creado: Date.now()
+                });
+                inputNuevaCat.value = "";
+            } catch (err) {
+                alert("Error al añadir la categoría: " + err.message);
+            }
+        });
+
+        listaAdminCats.addEventListener("click", async (e) => {
+            if (e.target.classList.contains("btn-del-cat-row") || e.target.closest(".btn-del-cat-row")) {
+                const btn = e.target.classList.contains("btn-del-cat-row") ? e.target : e.target.closest(".btn-del-cat-row");
+                const id = btn.dataset.id;
+                if (confirm("¿Estás segura de que deseas eliminar esta categoría?")) {
+                    try {
+                        await deleteDoc(doc(db, "categories", id));
+                    } catch (err) {
+                        alert("No se pudo eliminar la categoría: " + err.message);
+                    }
+                }
+            }
+        });
+
+        window.prepararEdicion = (id) => {
+            const prod = productosCache[id];
+            if (!prod) return;
+            editandoId = id;
+            document.getElementById("j_nombre").value = prod.nombre || "";
+            document.getElementById("j_precio").value = prod.precio || "";
+            selectCategoria.value = prod.categoria || "";
+            
+            imagenExistenteUrl = prod.imagenUrl || "";
+            archivosParaSubir = [];
+            previewGallery.innerHTML = "";
+            if (imagenExistenteUrl) {
+                const container = document.createElement("div");
+                container.className = "preview-container";
+                container.innerHTML = `<img src="${imagenExistenteUrl}" class="preview-thumb">`;
+                previewGallery.appendChild(container);
+            }
+            txtFileName.textContent = "Modificando producto individual existente.";
+            kickerForm.textContent = "MODIFICAR PRODUCTO";
+            tituloForm.textContent = "Editar artículo";
+            subtituloForm.textContent = `Actualizando los detalles del producto ID: ${id}`;
+            btnSubmit.textContent = "Guardar cambios";
+            btnCancelar.style.display = "block";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.toggleVisibilidad = async (id, estadoActual) => {
+            try {
+                const nuevoEstado = estadoActual === false ? true : false;
+                await updateDoc(doc(db, "jewelry", id), {
+                    activo: nuevoEstado
+                });
+            } catch (err) {
+                alert("Error al cambiar la visibilidad: " + err.message);
+            }
+        };
+
+        btnCancelar.addEventListener("click", () => {
+            resetearFormulario();
+        });
+
+        function resetearFormulario() {
+            editandoId = null;
+            imagenExistenteUrl = "";
+            archivosParaSubir = [];
+            form.reset();
+            fileInput.value = "";
+            folderInput.value = "";
+            previewGallery.innerHTML = "";
+            txtFileName.textContent = "No se ha seleccionado ningún archivo.";
+            kickerForm.textContent = "Nuevo Producto";
+            tituloForm.textContent = "Publicar artículo";
+            subtituloForm.textContent = "Ingresa los detalles, selecciona categoría y sube fotos individuales o una carpeta completa.";
+            btnSubmit.textContent = "Subir a Google Drive y Publicar";
+            btnCancelar.style.display = "none";
+            mensajeEstado.textContent = "";
+        }
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!editandoId && archivosParaSubir.length === 0) {
+                alert("Por favor selecciona al menos una foto o una carpeta antes de publicar.");
+                return;
+            }
+            btnSubmit.disabled = true;
+            mensajeEstado.style.color = "#d4af37";
+            try {
+                const nombreBase = document.getElementById("j_nombre").value.trim();
+                const precio = Number(document.getElementById("j_precio").value);
+                const categoriaSeleccionada = selectCategoria.value; 
+                if (editandoId) {
+                    let urlFinal = imagenExistenteUrl;
+                    if (archivosParaSubir.length > 0) {
+                        mensajeEstado.textContent = "Subiendo nueva imagen a Google Drive...";
+                        const file = archivosParaSubir[0];
+                        const base64 = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = error => reject(error);
+                            reader.readAsDataURL(file);
+                        });
+                        const res = await fetch(URL_GOOGLE_DRIVE, {
+                            method: "POST",
+                            body: JSON.stringify({
+                                file: base64,
+                                filename: `JOYERIA_${Date.now()}_${file.name}`
+                            })
+                        });
+                        const dataDrive = await res.json();
+                        if (dataDrive.status !== "success") {
+                            throw new Error(dataDrive.message || "Error al subir la imagen a Drive.");
+                        }
+                        urlFinal = dataDrive.url;
+                    }
+                    mensajeEstado.textContent = "Actualizando datos en Firebase...";
+                    await updateDoc(doc(db, "jewelry", editandoId), {
+                        nombre: nombreBase,
+                        precio: precio,
+                        categoria: categoriaSeleccionada,
+                        imagenUrl: urlFinal,
+                        actualizado: Date.now()
+                    });
+                    mensajeEstado.style.color = "#16a34a";
+                    mensajeEstado.textContent = "¡Producto actualizado con éxito!";
+                } else {
+                    let creados = 0;
+                    for (let i = 0; i < archivosParaSubir.length; i++) {
+                        const file = archivosParaSubir[i];
+                        mensajeEstado.textContent = `Subiendo imagen ${i + 1} de ${archivosParaSubir.length} a Google Drive...`;
+                        const base64 = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = error => reject(error);
+                            reader.readAsDataURL(file);
+                        });
+                        const res = await fetch(URL_GOOGLE_DRIVE, {
+                            method: "POST",
+                            body: JSON.stringify({
+                                file: base64,
+                                filename: `JOYERIA_${Date.now()}_${file.name}`
+                            })
+                        });
+                        const dataDrive = await res.json();
+                        if (dataDrive.status !== "success") continue;
+                        await addDoc(collection(db, "jewelry"), {
+                            nombre: nombreBase,
+                            precio: precio,
+                            categoria: categoriaSeleccionada,
+                            imagenUrl: dataDrive.url,
+                            activo: true,
+                            creado: Date.now() + i
+                        });
+                        creados++;
+                    }
+                    mensajeEstado.style.color = "#16a34a";
+                    mensajeEstado.textContent = `¡Se publicaron ${creados} producto(s) con éxito!`;
+                }
+                resetearFormulario();
+            } catch (err) {
+                console.error(err);
+                mensajeEstado.style.color = "#dc2626";
+                mensajeEstado.textContent = "Error: " + err.message;
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = editandoId ? "Guardar cambios" : "Subir a Google Drive y Publicar";
+            }
+        });
+
+        window.toggleCategoriaColapsar = (catNombre) => {
+            categoriasColapsadas[catNombre] = !categoriasColapsadas[catNombre];
+            renderizarInventarioAgrupado();
+        };
+
+        const q = query(collection(db, "jewelry"), orderBy("creado", "desc"));
+        onSnapshot(q, (snapshot) => {
+            listaProductosSnapshot = [];
+            productosCache = {};
+            snapshot.forEach((documento) => {
+                const item = documento.data();
+                const id = documento.id;
+                productosCache[id] = { id, ...item };
+                listaProductosSnapshot.push({ id, ...item });
+            });
+            renderizarInventarioAgrupado();
+        });
+
+        function renderizarInventarioAgrupado() {
+            if (!listaInventario) return;
+            listaInventario.innerHTML = "";
+            const productosFiltrados = listaProductosSnapshot.filter(item => {
+                const esActivo = item.activo !== false;
+                if (filtroEstadoActual === "activos") return esActivo;
+                if (filtroEstadoActual === "ocultos") return !esActivo;
+                return true;
+            });
+            let porCategoria = {};
+            if (filtroEstadoActual === "todos") {
+                listaCategoriasRegistradas.forEach(cat => {
+                    porCategoria[cat] = [];
+                });
+            }
+            productosFiltrados.forEach(item => {
+                let cat = item.categoria ? item.categoria.trim().toUpperCase() : "SIN CATEGORÍA";
+                if (!porCategoria[cat]) {
+                    porCategoria[cat] = [];
+                }
+                porCategoria[cat].push(item);
+            });
+            if (Object.keys(porCategoria).length === 0) {
+                const textoVacio = filtroEstadoActual === "ocultos" 
+                    ? "No tienes ningún producto oculto actualmente." 
+                    : filtroEstadoActual === "activos" 
+                    ? "No tienes productos activos publicados." 
+                    : "No hay categorías ni productos registrados aún.";
+                listaInventario.innerHTML = `<p style='color:#a3a3a3; grid-column: 1 / -1;'>${textoVacio}</p>`;
+                return;
+            }
+            for (const [cat, productos] of Object.entries(porCategoria)) {
+                const estaColapsada = !!categoriasColapsadas[cat];
+                const flecha = estaColapsada ? "▶" : "▼";
+                const estiloDisplay = estaColapsada ? "display: none;" : "display: grid;";
+                const safeCatId = cat.replace(/[^a-zA-Z0-9]/g, '_');
+                const seccionCat = document.createElement("div");
+                seccionCat.style.cssText = "grid-column: 1 / -1; background: #141414; border: 1px solid #262626; border-radius: 12px; padding: 16px; margin-bottom: 16px;";
+                
+                seccionCat.innerHTML = `
+                    <div onclick="toggleCategoriaColapsar('${cat}')" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+                        <h3 style="margin: 0; font-size: 1.1rem; color: #d4af37; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.9rem;">${flecha}</span> 
+                            📁 ${cat} (${productos.length} productos)
+                        </h3>
+                    </div>
+                    <div id="grid-cat-${safeCatId}" style="${estiloDisplay} grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 14px;">
+                    </div>
+                `;
+                const gridProductos = seccionCat.querySelector(`#grid-cat-${safeCatId}`);
+                if (gridProductos) {
+                    if (productos.length === 0) {
+                        gridProductos.style.display = "block";
+                        gridProductos.innerHTML = `<p style="color: #737373; font-size: 0.85rem; margin: 0;">No hay productos en esta categoría.</p>`;
+                    } else {
+                        productos.forEach(item => {
+                            const esActivo = item.activo !== false;
+                            const textoEstado = esActivo ? "👁️ Visible" : "🚫 Oculto";
+                            const colorEstado = esActivo ? "background: #065f46; color: #6ee7b7;" : "background: #7f1d1d; color: #fca5a5;";
+                            const card = document.createElement("div");
+                            card.className = "product-item";
+                            card.innerHTML = `
+                                <div>
+                                    <img src="${item.imagenUrl || ''}" alt="${item.nombre}" loading="lazy" style="${!esActivo ? 'opacity: 0.4;' : ''}">
+                                    <h4 style="margin: 8px 0 2px 0; color: #fff;">${item.nombre}</h4>
+                                    <p style="margin: 0; color: #d4af37; font-weight: 700;">₡${(item.precio || 0).toLocaleString()}</p>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                                        <small style="color: #a3a3a3; text-transform: uppercase;">${item.categoria}</small>
+                                        <button onclick="toggleVisibilidad('${item.id}', ${esActivo})" style="${colorEstado} border: none; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; cursor: pointer;" type="button">
+                                            ${textoEstado}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="product-actions" style="margin-top: 10px;">
+                                    <button class="btn-edit" onclick="prepararEdicion('${item.id}')" type="button">✏️ Editar</button>
+                                    <button class="btn-delete" data-id="${item.id}" type="button">🗑 Eliminar</button>
+                                </div>
+                            `;
+                            gridProductos.appendChild(card);
+                        });
+                    }
+                }
+                listaInventario.appendChild(seccionCat);
+            }
+        }
+
+        listaInventario.addEventListener("click", async (e) => {
+            if (e.target.classList.contains("btn-delete")) {
+                const id = e.target.dataset.id;
+                if (confirm("¿Estás segura de que deseas eliminar este producto?")) {
+                    try {
+                        await deleteDoc(doc(db, "jewelry", id));
+                        if (editandoId === id) resetearFormulario();
+                    } catch (err) {
+                        alert("No se pudo eliminar: " + err.message);
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>
